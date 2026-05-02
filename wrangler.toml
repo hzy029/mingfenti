@@ -1,0 +1,13 @@
+name = "mingqing-detector"
+main = ".open-next/worker.js"
+compatibility_date = "2026-05-02"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "mingqing-detector"
+database_id = "replace-with-cloudflare-d1-database-id"
