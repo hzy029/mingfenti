@@ -10,4 +10,4 @@ binding = "ASSETS"
 [[d1_databases]]
 binding = "DB"
 database_name = "mingqing-detector"
-database_id = "replace-with-cloudflare-d1-database-id"
+database_id = "b4efd9c5-e0e4-4b84-b8d9-70a89671bb5d"
