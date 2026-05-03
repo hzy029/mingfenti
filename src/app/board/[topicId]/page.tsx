@@ -79,52 +79,78 @@ export default async function BoardTopicPage({ params }: BoardTopicPageProps) {
     );
   }
 
-  const topicResult = await db
-    .prepare(`SELECT id, title, pin_weight, created_at FROM board_topics WHERE id = ? AND hidden = 0`)
-    .bind(topicId)
-    .all<TopicRow>();
+  let topic: TopicRow | undefined;
+  let topicDescription = "";
+  let posts: PostRow[] = [];
+  let commentsByAnswer = new Map<number, BoardCommentPublicRow[]>();
 
-  const topic = topicResult.results?.[0];
+  try {
+    const topicResult = await db
+      .prepare(`SELECT id, title, pin_weight, created_at FROM board_topics WHERE id = ? AND hidden = 0`)
+      .bind(topicId)
+      .all<TopicRow>();
 
-  if (!topic) {
-    notFound();
-  }
+    topic = topicResult.results?.[0];
 
-  const metaResult = await db
-    .prepare(`SELECT description FROM board_topic_meta WHERE topic_id = ?`)
-    .bind(topicId)
-    .all<{ description: string | null }>();
+    if (!topic) {
+      notFound();
+    }
 
-  const topicDescription = metaResult.results?.[0]?.description?.trim() ?? "";
+    const metaResult = await db
+      .prepare(`SELECT description FROM board_topic_meta WHERE topic_id = ?`)
+      .bind(topicId)
+      .all<{ description: string | null }>();
 
-  const postsResult = await db
-    .prepare(
-      `SELECT id, author_display, body, heat_score, created_at
+    topicDescription = metaResult.results?.[0]?.description?.trim() ?? "";
+
+    const postsResult = await db
+      .prepare(
+        `SELECT id, author_display, body, heat_score, created_at
       FROM board_posts
       WHERE topic_id = ? AND hidden = 0
       ORDER BY id ASC`
-    )
-    .bind(topicId)
-    .all<PostRow>();
+      )
+      .bind(topicId)
+      .all<PostRow>();
 
-  const posts = postsResult.results ?? [];
+    posts = postsResult.results ?? [];
 
-  const answerIds = posts.map((post) => post.id);
-  let commentsByAnswer = new Map<number, BoardCommentPublicRow[]>();
+    const answerIds = posts.map((post) => post.id);
 
-  if (answerIds.length > 0) {
-    const placeholders = answerIds.map(() => "?").join(", ");
-    const commentsResult = await db
-      .prepare(
-        `SELECT c.id, c.answer_id, c.author_display, c.body, c.heat_score, c.created_at
+    if (answerIds.length > 0) {
+      const placeholders = answerIds.map(() => "?").join(", ");
+      const commentsResult = await db
+        .prepare(
+          `SELECT c.id, c.answer_id, c.author_display, c.body, c.heat_score, c.created_at
         FROM board_comments c
         WHERE c.answer_id IN (${placeholders}) AND c.hidden = 0
         ORDER BY c.answer_id ASC, c.id ASC`
-      )
-      .bind(...answerIds)
-      .all<CommentDbRow>();
+        )
+        .bind(...answerIds)
+        .all<CommentDbRow>();
 
-    commentsByAnswer = groupCommentsByAnswer(commentsResult.results ?? []);
+      commentsByAnswer = groupCommentsByAnswer(commentsResult.results ?? []);
+    }
+  } catch {
+    return (
+      <main className="min-h-screen bg-[#f8fafc] text-slate-900">
+        <SiteHeader />
+        <div className="mx-auto max-w-3xl px-5 py-16">
+          <p className="text-lg font-bold text-slate-800">暂时无法加载该主题</p>
+          <p className="mt-3 text-sm font-bold leading-7 text-slate-600">
+            多为远程 D1 尚未执行建表脚本（schema.sql），或 Worker 未正确绑定 D1。请在 Cloudflare 控制台对绑定数据库执行迁移后重新部署。
+          </p>
+          <div className="mt-8 flex flex-wrap gap-4">
+            <Link className="font-black text-[#4937db] hover:underline" href="/board">
+              返回留言板列表
+            </Link>
+            <Link className="font-black text-[#4937db] hover:underline" href="/">
+              返回首页
+            </Link>
+          </div>
+        </div>
+      </main>
+    );
   }
 
   return (
