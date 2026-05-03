@@ -55,6 +55,9 @@ CREATE INDEX IF NOT EXISTS idx_board_posts_topic_heat
 CREATE INDEX IF NOT EXISTS idx_board_posts_topic_review
   ON board_posts (topic_id, review_status, hidden);
 
+CREATE INDEX IF NOT EXISTS idx_board_posts_public_rank
+  ON board_posts (topic_id, hidden, review_status, heat_score, published_at, id);
+
 CREATE TABLE IF NOT EXISTS board_topic_meta (
   topic_id INTEGER PRIMARY KEY,
   description TEXT,
@@ -88,6 +91,9 @@ CREATE INDEX IF NOT EXISTS idx_board_comments_answer_heat
 CREATE INDEX IF NOT EXISTS idx_board_comments_answer_review
   ON board_comments (answer_id, review_status, hidden);
 
+CREATE INDEX IF NOT EXISTS idx_board_comments_public_rank
+  ON board_comments (answer_id, hidden, review_status, heat_score, published_at, id);
+
 CREATE TABLE IF NOT EXISTS board_daily_actions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   day_utc TEXT NOT NULL,
@@ -113,3 +119,6 @@ CREATE INDEX IF NOT EXISTS idx_board_likes_target
 
 CREATE INDEX IF NOT EXISTS idx_board_likes_ip_target
   ON board_likes (ip_hash, kind, target_id);
+
+CREATE INDEX IF NOT EXISTS idx_board_likes_ip_created
+  ON board_likes (ip_hash, created_at);

@@ -167,6 +167,14 @@ export async function ensureBoardReviewSchema(db: D1Database) {
   await tryRun(db, `ALTER TABLE board_comments ADD COLUMN review_verdict TEXT`);
   await tryRun(db, `ALTER TABLE board_comments ADD COLUMN review_reason TEXT`);
   await tryRun(db, `CREATE INDEX IF NOT EXISTS idx_board_posts_topic_review ON board_posts (topic_id, review_status, hidden)`);
+  await tryRun(
+    db,
+    `CREATE INDEX IF NOT EXISTS idx_board_posts_public_rank ON board_posts (topic_id, hidden, review_status, heat_score, published_at, id)`
+  );
+  await tryRun(
+    db,
+    `CREATE INDEX IF NOT EXISTS idx_board_comments_public_rank ON board_comments (answer_id, hidden, review_status, heat_score, published_at, id)`
+  );
   await tryRun(db, `CREATE INDEX IF NOT EXISTS idx_board_comments_answer_review ON board_comments (answer_id, review_status, hidden)`);
   await tryRun(
     db,

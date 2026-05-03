@@ -33,17 +33,18 @@ C:\nvm4w\nodejs\npm.cmd run d1:apply:remote
 C:\nvm4w\nodejs\npm.cmd run d1:count:remote
 ```
 
-Cloudflare Workers 构建命令：
+Cloudflare Workers / Pages **构建**（CMD 需指向 **作用域包**，否则会报 `could not determine executable to run`）：
 
 ```bash
-npx opennextjs-cloudflare build
+npm ci
+npm run cf:build
 ```
 
-部署命令：
+等价写法：`npm ci && npx @opennextjs/cloudflare build`（**不要**写 `npx opennextjs-cloudflare`，npm 上没有该包名）。
 
-```bash
-npx wrangler versions upload
-```
+控制台一键部署命令示例：`npm ci && npm run deploy`。
+
+上传版本也可在项目目录安装依赖后使用 Wrangler，详见 [`docs/实现/handoff-工程当前.md`](docs/实现/handoff-工程当前.md) 与 Cloudflare 文档。
 
 当前 D1 绑定在 `wrangler.toml` 中为：
 

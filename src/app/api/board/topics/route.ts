@@ -25,11 +25,13 @@ export async function GET() {
           t.title,
           t.pin_weight,
           t.created_at,
-          COUNT(p.id) AS reply_count
+          (
+            SELECT COUNT(*)
+            FROM board_posts p
+            WHERE p.topic_id = t.id AND p.hidden = 0 AND p.review_status = 'published'
+          ) AS reply_count
         FROM board_topics t
-        LEFT JOIN board_posts p ON p.topic_id = t.id AND p.hidden = 0 AND p.review_status = 'published'
         WHERE t.hidden = 0
-        GROUP BY t.id
         ORDER BY t.pin_weight DESC, reply_count DESC, t.id DESC
         LIMIT 100`
       )

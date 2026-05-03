@@ -2,6 +2,8 @@ import type { D1Database } from "@/lib/cloudflare-db";
 
 export type BoardLikeKind = "post" | "comment";
 
+export const BOARD_DAILY_LIKE_LIMIT = 100;
+
 export async function ensureBoardLikesSchema(db: D1Database): Promise<void> {
   await db
     .prepare(
@@ -20,6 +22,9 @@ export async function ensureBoardLikesSchema(db: D1Database): Promise<void> {
     .run();
   await db
     .prepare(`CREATE INDEX IF NOT EXISTS idx_board_likes_ip_target ON board_likes (ip_hash, kind, target_id)`)
+    .run();
+  await db
+    .prepare(`CREATE INDEX IF NOT EXISTS idx_board_likes_ip_created ON board_likes (ip_hash, created_at)`)
     .run();
 }
 
@@ -49,6 +54,37 @@ export async function tryInsertBoardLike(
     .run();
 
   return d1StatementChanges(runResult) > 0;
+}
+
+export async function hasBoardLike(
+  db: D1Database,
+  kind: BoardLikeKind,
+  targetId: number,
+  ipHash: string
+): Promise<boolean> {
+  const { results } = await db
+    .prepare(`SELECT id FROM board_likes WHERE kind = ? AND target_id = ? AND ip_hash = ? LIMIT 1`)
+    .bind(kind, targetId, ipHash)
+    .all<{ id: number }>();
+
+  return Boolean(results?.[0]);
+}
+
+export async function countDailyBoardLikes(db: D1Database, dayUtc: string, ipHash: string): Promise<number> {
+  const dayStart = `${dayUtc}T00:00:00.000Z`;
+  const nextDay = new Date(`${dayUtc}T00:00:00.000Z`);
+  nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+  const dayEnd = nextDay.toISOString();
+
+  const { results } = await db
+    .prepare(`SELECT COUNT(*) AS c FROM board_likes WHERE ip_hash = ? AND created_at >= ? AND created_at < ?`)
+    .bind(ipHash, dayStart, dayEnd)
+    .all<{ c: number }>();
+
+  const row = results?.[0];
+  const n = row?.c;
+
+  return typeof n === "number" ? n : Number(n) || 0;
 }
 
 export async function getLikedTargetIdsForIp(

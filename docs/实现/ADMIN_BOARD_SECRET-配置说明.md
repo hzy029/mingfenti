@@ -80,9 +80,11 @@
 5. **重新部署 Worker**（若你改 Secret 后线上未自动刷新版本）：
 
    ```powershell
-   npx opennextjs-cloudflare build
+   npm run cf:build
    npx wrangler versions upload
    ```
+
+   若未先 `npm install`，或 Cloudflare 构建里只写了 `npx opennextjs-cloudflare …`，会报 **could not determine executable to run**；应使用 `npm run cf:build` 或 `npx @opennextjs/cloudflare build`（带作用域包名）。
 
    具体以你日常发布流程为准；确保当前 Worker 版本能读到新 Secret。
 

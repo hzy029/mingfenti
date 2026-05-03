@@ -1,7 +1,9 @@
 import { isAllowedBoardPostResultId } from "@/lib/board-post-eligibility";
 import {
   BOARD_DAILY_POST_LIMIT,
+  BOARD_SITE_DAILY_POST_LIMIT,
   countDailyActions,
+  countSiteDailyActions,
   ensureBoardDailyActionsSchema,
   getClientIp,
   getUtcDayString,
@@ -72,6 +74,19 @@ export async function POST(request: Request, context: RouteParams) {
         ok: false,
         reason: "daily-limit-exceeded",
         message: `同一网络环境下每日最多发帖 ${BOARD_DAILY_POST_LIMIT} 次（回答与评论合计），请明日再试`
+      },
+      { status: 429 }
+    );
+  }
+
+  const siteUsed = await countSiteDailyActions(db, dayUtc);
+
+  if (siteUsed >= BOARD_SITE_DAILY_POST_LIMIT) {
+    return Response.json(
+      {
+        ok: false,
+        reason: "site-daily-limit",
+        message: "本站今日留言名额已满，请明天再来。"
       },
       { status: 429 }
     );

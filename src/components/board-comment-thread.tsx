@@ -62,6 +62,8 @@ export function BoardCommentThread({
           setError(payload.message ?? "发表评论需先完成普通版测试并取得发帖资格。");
         } else if (payload.reason === "daily-limit-exceeded") {
           setError(payload.message ?? "今日发帖次数已达上限。");
+        } else if (payload.reason === "site-daily-limit") {
+          setError(payload.message ?? "本站今日留言名额已满，请明天再来。");
         } else if (payload.reason === "body-required") {
           setError("请填写评论正文");
         } else {

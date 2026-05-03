@@ -638,7 +638,7 @@ C:\nvm4w\nodejs\npm.cmd run build
 Cloudflare 构建日志已确认：
 
 - Node.js 22.16.0
-- `npx opennextjs-cloudflare build` 构建成功
+- `npm run cf:build` 或 `npx @opennextjs/cloudflare build` 构建成功
 - Worker 成功生成 `.open-next/worker.js`
 - Worker binding 中已有 `env.DB (mingqing-detector)` 和 `env.ASSETS`
 
@@ -722,7 +722,7 @@ C:\nvm4w\nodejs\npm.cmd run d1:count:remote
 Cloudflare 构建命令：
 
 ```bash
-npx opennextjs-cloudflare build
+npx @opennextjs/cloudflare build
 ```
 
 Cloudflare 当前实际部署命令：

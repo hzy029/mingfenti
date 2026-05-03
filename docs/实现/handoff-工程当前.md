@@ -69,10 +69,10 @@ C:\nvm4w\nodejs\npm.cmd run deploy
 
 等价于 `opennextjs-cloudflare build && opennextjs-cloudflare deploy`。亦可手动：`opennextjs-cloudflare build` 后按 Wrangler 文档上传。**部署后**若自定义域与 Workers 子域表现不一致，可对域名清理缓存或核对控制台 Worker 版本。
 
-以下为历史备用写法（若团队仍用手动两步）：
+以下为历史备用写法（若团队仍用手动两步；**必须**带作用域包名，或已 `npm install` 后用 `npm run cf:build`）：
 
 ```bash
-npx opennextjs-cloudflare build
+npx @opennextjs/cloudflare build
 npx wrangler versions upload
 ```
 

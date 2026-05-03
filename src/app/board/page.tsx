@@ -29,23 +29,20 @@ export default async function BoardIndexPage() {
             t.title,
             t.pin_weight,
             t.created_at,
-            COUNT(p.id) AS reply_count,
-            hot.body AS hot_preview_body
+            (
+              SELECT COUNT(*)
+              FROM board_posts p
+              WHERE p.topic_id = t.id AND p.hidden = 0 AND p.review_status = 'published'
+            ) AS reply_count,
+            (
+              SELECT p.body
+              FROM board_posts p
+              WHERE p.topic_id = t.id AND p.hidden = 0 AND p.review_status = 'published'
+              ORDER BY p.heat_score DESC, p.published_at DESC, p.id DESC
+              LIMIT 1
+            ) AS hot_preview_body
           FROM board_topics t
-          LEFT JOIN board_posts p ON p.topic_id = t.id AND p.hidden = 0 AND p.review_status = 'published'
-          LEFT JOIN (
-            SELECT topic_id, body FROM (
-              SELECT
-                topic_id,
-                body,
-                ROW_NUMBER() OVER (PARTITION BY topic_id ORDER BY heat_score DESC, id DESC) AS rn
-              FROM board_posts
-              WHERE hidden = 0 AND review_status = 'published'
-            )
-            WHERE rn = 1
-          ) hot ON hot.topic_id = t.id
           WHERE t.hidden = 0
-          GROUP BY t.id, t.title, t.pin_weight, t.created_at, hot.body
           ORDER BY t.pin_weight DESC, reply_count DESC, t.id DESC
           LIMIT 100`
         )

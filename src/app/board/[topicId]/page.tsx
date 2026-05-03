@@ -25,6 +25,7 @@ type PostRow = {
   author_display: string | null;
   body: string;
   heat_score: number;
+  published_at: string | null;
   created_at: string;
 };
 
@@ -112,10 +113,11 @@ export default async function BoardTopicPage({ params }: BoardTopicPageProps) {
 
     const postsResult = await db
       .prepare(
-        `SELECT id, author_display, body, heat_score, created_at
+        `SELECT id, author_display, body, heat_score, published_at, created_at
       FROM board_posts
       WHERE topic_id = ? AND hidden = 0 AND review_status = 'published'
-      ORDER BY id ASC`
+      ORDER BY heat_score DESC, published_at DESC, id DESC
+      LIMIT 20`
       )
       .bind(topicId)
       .all<PostRow>();
@@ -131,7 +133,19 @@ export default async function BoardTopicPage({ params }: BoardTopicPageProps) {
           `SELECT c.id, c.answer_id, c.author_display, c.body, c.heat_score, c.created_at
         FROM board_comments c
         WHERE c.answer_id IN (${placeholders}) AND c.hidden = 0 AND c.review_status = 'published'
-        ORDER BY c.answer_id ASC, c.id ASC`
+          AND (
+            SELECT COUNT(*)
+            FROM board_comments newer
+            WHERE newer.answer_id = c.answer_id
+              AND newer.hidden = 0
+              AND newer.review_status = 'published'
+              AND (
+                newer.heat_score > c.heat_score
+                OR (newer.heat_score = c.heat_score AND newer.published_at > c.published_at)
+                OR (newer.heat_score = c.heat_score AND newer.published_at = c.published_at AND newer.id > c.id)
+              )
+          ) < 3
+        ORDER BY c.answer_id ASC, c.heat_score DESC, c.published_at DESC, c.id DESC`
         )
         .bind(...answerIds)
         .all<CommentDbRow>();

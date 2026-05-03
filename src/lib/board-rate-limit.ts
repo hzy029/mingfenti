@@ -1,6 +1,7 @@
 import type { D1Database } from "@/lib/cloudflare-db";
 
 export const BOARD_DAILY_POST_LIMIT = 20;
+export const BOARD_SITE_DAILY_POST_LIMIT = 3000;
 
 /** 建表：每日发帖计数（回答+评论合计，按 UTC 日 + IP 哈希） */
 export async function ensureBoardDailyActionsSchema(db: D1Database): Promise<void> {
@@ -87,6 +88,18 @@ export async function countDailyActions(db: D1Database, dayUtc: string, ipHash: 
   const { results } = await db
     .prepare(`SELECT COUNT(*) AS c FROM board_daily_actions WHERE day_utc = ? AND ip_hash = ?`)
     .bind(dayUtc, ipHash)
+    .all<{ c: number }>();
+
+  const row = results?.[0];
+  const n = row?.c;
+
+  return typeof n === "number" ? n : Number(n) || 0;
+}
+
+export async function countSiteDailyActions(db: D1Database, dayUtc: string): Promise<number> {
+  const { results } = await db
+    .prepare(`SELECT COUNT(*) AS c FROM board_daily_actions WHERE day_utc = ?`)
+    .bind(dayUtc)
     .all<{ c: number }>();
 
   const row = results?.[0];
