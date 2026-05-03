@@ -1,4 +1,4 @@
-import { Construction, Home, PenLine } from "lucide-react";
+import { ClipboardList, Construction, Home, MessagesSquare, PenLine } from "lucide-react";
 import Link from "next/link";
 import { siteConfig } from "@/data/site-config";
 
@@ -19,10 +19,18 @@ export function SiteHeader() {
           <LogoMark />
           <span className="text-xl">明粉检测器ti</span>
         </Link>
-        <div className="hidden items-center gap-2 md:flex">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <Link className="inline-flex items-center gap-1 rounded-xl px-4 py-3 text-[#4937db] transition hover:bg-[#eef1ff]" href="/">
             <Home size={15} />
             首页
+          </Link>
+          <Link className="inline-flex items-center gap-1 rounded-xl px-4 py-3 text-[#4937db] transition hover:bg-[#eef1ff]" href="/test">
+            <ClipboardList size={15} />
+            普通测试
+          </Link>
+          <Link className="inline-flex items-center gap-1 rounded-xl px-4 py-3 text-[#4937db] transition hover:bg-[#eef1ff]" href="/board">
+            <MessagesSquare size={15} />
+            留言板
           </Link>
           <span className="inline-flex cursor-not-allowed items-center gap-1 rounded-xl px-4 py-3 text-[#0f1535]/70 transition hover:bg-[#eef1ff]">
             <Construction size={15} />

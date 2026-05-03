@@ -9,15 +9,36 @@ import type { BasicQuestion } from "@/data/types";
 import { drawBasicTestQuestions } from "@/lib/basic-question-selection";
 import { getBasicResult, scoreBasicAnswers, type BasicAnswerMap } from "@/lib/basic-scoring";
 import { BASIC_TEST_SESSION_STORAGE_KEY, type BasicTestSession } from "@/lib/basic-test-session";
+import { shuffleWithSeed } from "@/lib/shuffle-seed";
+
+function createShuffleSessionSalt(): string {
+  if (typeof globalThis.crypto?.getRandomValues === "function") {
+    const bytes = new Uint8Array(16);
+    globalThis.crypto.getRandomValues(bytes);
+
+    return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+
+  return "shuffle-salt-fallback";
+}
 
 export default function BasicTestPage() {
   const router = useRouter();
+  const [shuffleSalt] = useState(createShuffleSessionSalt);
   const [questions] = useState<BasicQuestion[]>(() => drawBasicTestQuestions());
   const [startedAt] = useState(() => new Date().toISOString());
   const [answers, setAnswers] = useState<BasicAnswerMap>({});
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const currentQuestion = questions[currentIndex];
+  const displayOptions = useMemo(
+    () => shuffleWithSeed(currentQuestion.options, `${shuffleSalt}:${currentQuestion.id}`),
+    [currentQuestion.id, currentQuestion.options, shuffleSalt]
+  );
   const answeredCount = Object.keys(answers).length;
   const selectedOptionId = answers[currentQuestion.id];
   const progressPercent = Math.round((answeredCount / BASIC_TEST_DRAW_COUNT) * 100);
@@ -51,7 +72,7 @@ export default function BasicTestPage() {
 
     window.localStorage.setItem(BASIC_TEST_SESSION_STORAGE_KEY, JSON.stringify(session));
     void recordBasicAttempt(session, result.displayResult.title);
-    router.push("/result");
+    router.push("/test/complete");
   }
 
   function selectOption(optionId: string) {
@@ -97,8 +118,9 @@ export default function BasicTestPage() {
           <h1 className="text-2xl font-black leading-10">{currentQuestion.title}</h1>
 
           <div className="mt-6 grid gap-3">
-            {currentQuestion.options.map((option) => {
+            {displayOptions.map((option, slotIndex) => {
               const selected = selectedOptionId === option.id;
+              const displayLetter = String.fromCharCode(65 + slotIndex);
 
               return (
                 <button
@@ -118,7 +140,7 @@ export default function BasicTestPage() {
                       selected ? "bg-[#b72f24] text-white" : "bg-[#15120d]/10 text-[#15120d]"
                     ].join(" ")}
                   >
-                    {option.id.toUpperCase()}
+                    {displayLetter}
                   </span>
                   <span>{option.label}</span>
                 </button>

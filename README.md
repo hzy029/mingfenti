@@ -4,11 +4,12 @@
 
 ## 当前状态
 
-- Next.js 项目骨架已建立
-- 依赖已由用户本机安装成功
-- 首页可在 `http://localhost:3000` 打开
-- 普通版测试数据已写入代码，但当前题库仅用于流程测试
-- 正式题库需要等评测标准和样本库完善后再生成
+- 普通版 MVP 已完成：首页、普通测试页、结果页和公告弹窗已可用
+- 普通版题库当前为 111 题，每次随机抽 20 题：核心题 6 道，补充题 14 道
+- 项目已接入 Cloudflare Workers + OpenNext + D1
+- D1 表 `basic_attempts` 已创建，用于记录匿名完成测试事件和首页结果分布；留言板表 `board_topics` / `board_posts` 见 `schema.sql`，需对远程库执行迁移后启用
+- `mingfen.sbs` 已绑定到 Worker 自定义域；历史 Pages/DNS 源站 522 问题已处理
+- `满遗` 保留为 `客观中立` 的 10% 随机彩蛋，并在统计中计入“中立正常”
 
 ## 本地开发
 
@@ -23,11 +24,46 @@ C:\nvm4w\nodejs\npm.cmd run dev
 http://localhost:3000
 ```
 
+## Cloudflare 部署与统计
+
+```powershell
+cd E:\java_project\2026\shuan
+C:\nvm4w\nodejs\npm.cmd install
+C:\nvm4w\nodejs\npm.cmd run d1:apply:remote
+C:\nvm4w\nodejs\npm.cmd run d1:count:remote
+```
+
+Cloudflare Workers 构建命令：
+
+```bash
+npx opennextjs-cloudflare build
+```
+
+部署命令：
+
+```bash
+npx wrangler versions upload
+```
+
+当前 D1 绑定在 `wrangler.toml` 中为：
+
+```toml
+binding = "DB"
+database_name = "mingqing-detector"
+```
+
+首页统计来源：
+
+- `POST /api/basic-attempts`：测试完成后写入匿名记录
+- `GET /api/basic-stats`：读取总测试次数和五类结果分布
+- 少于 30 秒完成的测试不会记录，避免异常快速提交污染统计
+
 ## 必读文档
 
 新窗口继续任务时，先读：
 
-- [项目交接文档](docs/实现/handoff.md)
+- [**工程与运维交接（当前）**](docs/实现/handoff-工程当前.md)（已实现能力、站主待办、代码入口）
+- [项目交接文档（历史与题库过程，可选）](docs/实现/handoff.md)
 - [普通版评测标准](docs/详细设计/basic-evaluation-standard.md)
 - [Pro 版评测标准](docs/详细设计/pro-evaluation-standard.md)
 - [资料库说明](docs/references/README.md)
@@ -84,7 +120,7 @@ docs/
 
 工程侧：
 
-- 先用测试题库跑通普通版流程
-- 创建 `src/lib/scoring.ts`
-- 创建 `/test` 和 `/result`
-- 之后再做 Pro 版流程
+- 若尚未执行：对远程 D1 跑 `npm run d1:apply:remote`，包含留言板表；配置 `ADMIN_BOARD_SECRET` 后使用 `/admin/board` 管理留言
+- 线上完成一次超过 30 秒的测试，确认 `basic_attempts` 从 0 增加到 1
+- 确认首页“累计测试次数”和“五类结果分布”能从 D1 更新
+- 后续：P1 DeepSeek 发帖审核（未实现）；Pro 版流程

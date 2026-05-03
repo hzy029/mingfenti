@@ -91,12 +91,9 @@ export function HomeAnnouncementModal() {
 
             <div className="border-l-4 border-[#6254f3] bg-[#eef1ff] p-5">
               <h3 className="text-xl font-black">更新计划</h3>
-              <div className="mt-3 grid gap-2 leading-7 text-[#596174]">
-                <p>· 111 道普通版题库，每次随机抽取 20 题</p>
-                <p>· 核心题 6 道，补充题 14 道</p>
-                <p>· 本地评分，不登录，不上传答题记录</p>
-                <p>· PRO 专业鉴定模式仍在建设中</p>
-              </div>
+              <p className="mt-3 text-lg font-bold leading-8 text-[#596174]">
+                已经更新留言板功能。通过检测后，可以在留言板留言。
+              </p>
             </div>
 
             <div>

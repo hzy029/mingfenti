@@ -12,6 +12,7 @@
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "d1:create": "wrangler d1 create mingqing-detector",
+    "d1:apply:local": "wrangler d1 execute mingqing-detector --local --file=./schema.sql",
     "d1:apply:remote": "wrangler d1 execute mingqing-detector --remote --file=./schema.sql",
     "d1:count:remote": "wrangler d1 execute mingqing-detector --remote --command=\"SELECT COUNT(*) AS count FROM basic_attempts;\""
   },
@@ -19,11 +20,13 @@
     "lucide-react": "latest",
     "next": "latest",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
-    "@opennextjs/cloudflare": "latest",
     "@eslint/eslintrc": "latest",
+    "@opennextjs/cloudflare": "latest",
     "@tailwindcss/postcss": "latest",
     "@types/node": "latest",
     "@types/react": "latest",

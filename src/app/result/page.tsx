@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Download, Home, RotateCcw } from "lucide-react";
+import { ArrowRight, Download, Home, MessageSquare, RotateCcw } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState, useSyncExternalStore } from "react";
@@ -349,7 +349,7 @@ export default function BasicResultPage() {
           </div>
         </section>
 
-        <section className="mt-6 grid gap-4 pb-10 md:grid-cols-2">
+        <section className="mt-6 grid gap-4 md:grid-cols-2">
           <button
             className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#2563eb] px-5 py-4 text-lg font-black text-white transition hover:bg-[#1d4ed8] disabled:cursor-wait disabled:opacity-70"
             disabled={isDownloading}
@@ -366,6 +366,17 @@ export default function BasicResultPage() {
             <RotateCcw size={22} />
             重新测试
           </Link>
+        </section>
+
+        <section className="mt-4 flex flex-col items-center border-t border-[#15120d]/10 pt-6 pb-10">
+          <Link
+            className="inline-flex w-full max-w-md items-center justify-center gap-2 rounded-2xl border-2 border-[#6366f1] bg-[#eef1ff] px-5 py-4 text-lg font-black text-[#4338ca] transition hover:bg-[#e0e7ff]"
+            href="/board"
+          >
+            <MessageSquare size={22} />
+            前往留言板
+          </Link>
+          <p className="mt-3 text-center text-sm font-bold text-[#5d5447]">通过检测后，欢迎到留言板参与讨论</p>
         </section>
       </div>
     </main>

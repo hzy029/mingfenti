@@ -8,7 +8,7 @@ out
 # production
 build
 
-# local env files
+# local env files（密钥勿入库）
 .env
 .env*.local
 
@@ -20,3 +20,28 @@ pnpm-debug.log*
 
 # misc
 .DS_Store
+Thumbs.db
+
+# TypeScript 增量编译缓存（不必提交）
+*.tsbuildinfo
+
+# ESLint 缓存
+.eslintcache
+
+# 测试覆盖率输出
+coverage/
+
+# Cloudflare Wrangler 本地状态（D1 --local 等）
+.wrangler/
+
+# OpenNext 构建产物（deploy/preview 时本地生成）
+.open-next/
+
+# Vercel（若曾用过 CLI）
+.vercel
+
+# Turbopack / Turbo 缓存目录（若出现）
+.turbo
+
+# JetBrains IDE
+.idea/

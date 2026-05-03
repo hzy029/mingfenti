@@ -1,4 +1,4 @@
-name = "mingqing-detector"
+name = "mingfenti"
 main = ".open-next/worker.js"
 compatibility_date = "2026-05-02"
 compatibility_flags = ["nodejs_compat"]

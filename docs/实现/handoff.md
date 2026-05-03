@@ -1,8 +1,13 @@
 # 项目交接文档
 
-日期：2026-05-01  
-用途：新窗口继续任务时优先阅读
+> **主交接入口已迁移**  
+> 工程现状、已实现能力、站主待办与代码入口，请以 **[工程与运维交接（当前）](./handoff-工程当前.md)** 为准（建议新会话优先阅读，约 10 分钟内可读完）。  
+> 本文档保留**历史过程、题库演进与旧决策记录**，可作归档查阅；其中部分小节可能与当前代码不一致，以仓库实际实现与 `handoff-工程当前.md` 为准。
 
+---
+
+日期：2026-05-01  
+用途：**历史归档**；当前工程交接请读 [handoff-工程当前.md](./handoff-工程当前.md)
 ## 1. 项目目标
 
 建设一个部署在 Cloudflare 的中文趣味测试网站，暂定名「XX 检测器」。主题是明清史观检测，借鉴 `sbti.ai` 的测试/结果传播结构，参考 `mingfen.fun` 的公告、统计和测试流程。
@@ -81,13 +86,15 @@ Pro 结果：
 
 新窗口建议阅读顺序：
 
-1. `docs/实现/handoff.md`
+1. `docs/实现/handoff-工程当前.md`（工程与运维主交接）
 2. `docs/详细设计/basic-evaluation-standard.md`
 3. `docs/详细设计/pro-evaluation-standard.md`
 4. `docs/references/README.md`
 5. `docs/references/topic-index.md`
 6. `docs/详细设计/pro-result-design.md`
 7. `docs/架构/sbti-ai-requirements-design.md`
+
+本文档（`handoff.md`）为历史过程与题库演进归档，可选读。
 
 辅助文档：
 
@@ -613,3 +620,121 @@ C:\nvm4w\nodejs\npm.cmd run build
    - 应自动跳回第一道未答题，而不是卡死
 3. 后续再进入 Cloudflare Pages 静态部署准备。
 
+## 20. 2026-05-02 Cloudflare Workers、D1 与自定义域最新状态
+
+本节覆盖前文关于“Cloudflare Pages 静态部署”“当前 MVP 不做真实全站统计”的旧记录。后续继续任务时，以本节为部署和统计实现依据。
+
+### 当前部署状态
+
+项目已从“纯静态 Pages”方案调整为：
+
+- Cloudflare Workers + OpenNext 部署 Next.js
+- Cloudflare D1 保存匿名测试完成记录
+- GitHub 仓库：`https://github.com/hzy029/mingfenti`
+- Cloudflare 项目名：`mingfenti`
+- Worker 预览域：`mingfenti.h1148899753.workers.dev`
+- 自定义域：`mingfen.sbs` 已添加到 Worker 的“域和路由”
+
+Cloudflare 构建日志已确认：
+
+- Node.js 22.16.0
+- `npx opennextjs-cloudflare build` 构建成功
+- Worker 成功生成 `.open-next/worker.js`
+- Worker binding 中已有 `env.DB (mingqing-detector)` 和 `env.ASSETS`
+
+此前 `mingfen.sbs` 访问出现 522，是因为根域名 DNS 仍指向旧 Pages/源站记录。已通过删除旧 `CNAME mingfen.sbs -> mingfen.pages.dev` 并给 Worker 添加自定义域处理。
+
+### D1 数据库状态
+
+D1 数据库已创建：
+
+```txt
+database_name = mingqing-detector
+database_id = b4efd9c5-e0e4-4b84-b8d9-70a89671bb5d
+binding = DB
+```
+
+对应配置文件：
+
+- `wrangler.toml`
+
+表结构文件：
+
+- `schema.sql`
+
+已执行远程建表，并验证：
+
+```powershell
+C:\nvm4w\nodejs\npm.cmd run d1:count:remote
+```
+
+返回 `count = 0` 时代表表已存在但尚无记录，不是异常。
+
+### 当前统计实现
+
+当前匿名统计不保存逐题答题明细，只保存一次完成测试事件：
+
+- `result_id`
+- `result_title`
+- `history_knowledge`
+- `ming_preference`
+- `started_at`
+- `completed_at`
+- `duration_seconds`
+- `is_recorded`
+- `created_at`
+
+相关文件：
+
+- `src/app/api/basic-attempts/route.ts`：写入 D1
+- `src/app/api/basic-stats/route.ts`：读取首页统计
+- `src/lib/cloudflare-db.ts`：通过 `getCloudflareContext({ async: true }).env.DB` 获取 D1
+- `src/lib/basic-stats.ts`：聚合五类分布
+- `src/app/page.tsx`：首页服务端动态读取统计
+
+统计映射：
+
+```txt
+objective-neutral + manchu-loyalist -> 中立正常
+ming-leaning-moe -> 萌萌人
+old-ming-fan -> 旧明粉
+new-ming-fan -> 新明粉
+zhu-yuanzhang-dreamer -> 朱元璋梦男
+```
+
+注意：
+
+- `满遗` 保留为 `客观中立` 的 10% 随机彩蛋，首页统计中归入“中立正常”
+- 少于 30 秒完成的测试会返回 `too-fast`，不会写入统计
+- 首页统计接口失败或 D1 不可用时会回落为 0 数据，不影响页面打开
+
+### 当前脚本
+
+```powershell
+C:\nvm4w\nodejs\npm.cmd run dev
+C:\nvm4w\nodejs\npm.cmd run typecheck
+C:\nvm4w\nodejs\npm.cmd run lint
+C:\nvm4w\nodejs\npm.cmd run build
+C:\nvm4w\nodejs\npm.cmd run d1:apply:remote
+C:\nvm4w\nodejs\npm.cmd run d1:count:remote
+```
+
+Cloudflare 构建命令：
+
+```bash
+npx opennextjs-cloudflare build
+```
+
+Cloudflare 当前实际部署命令：
+
+```bash
+npx wrangler versions upload
+```
+
+### 明天建议继续检查
+
+1. 打开 `https://mingfen.sbs/`，确认首页稳定访问。
+2. 完成一次超过 30 秒的普通测试。
+3. 执行 `d1:count:remote`，确认 `basic_attempts` 记录数增加。
+4. 刷新首页，确认“累计测试次数”和五类结果分布更新。
+5. 若统计不更新，优先检查 `/api/basic-attempts` 是否返回 `too-fast`、`database-not-configured` 或 `database-write-failed`。

@@ -2,8 +2,10 @@ import { ArrowRight, BarChart3, FlaskConical } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { HomeAnnouncementModal } from "@/components/home-announcement-modal";
+import { HomeMessageBoard } from "@/components/home-message-board";
 import { SiteHeader } from "@/components/site-header";
 import { siteConfig } from "@/data/site-config";
+import { getBoardHomeSlides } from "@/lib/board-home-data";
 import { getBasicStats, type BasicStats } from "@/lib/basic-stats";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +34,7 @@ function formatNumber(value: number) {
 
 export default async function HomePage() {
   const stats = await getBasicStats();
+  const boardSlides = await getBoardHomeSlides();
   const donutBackground = getDonutBackground(stats);
 
   return (
@@ -110,27 +113,7 @@ export default async function HomePage() {
           </Link>
         </article>
 
-        <article className="relative overflow-hidden rounded-2xl bg-[#4937db] p-8 text-white shadow-sm">
-          <span className="absolute right-0 top-4 rounded-l-full bg-[#facc15] px-3 py-1 text-sm font-black text-[#141537]">
-            PRO
-          </span>
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20">
-            <FlaskConical size={30} />
-          </div>
-          <h2 className="mt-6 text-3xl font-black">专业深度鉴定</h2>
-          <p className="mt-4 max-w-xl text-lg leading-8 text-white/85">
-            四维度量表正在建设中，后续会加入政治威权、民族双标、经济蒙昧、社会文明等深度画像。
-          </p>
-          <div className="mt-7 flex flex-wrap gap-3 text-sm font-bold text-white/70">
-            <span className="rounded-full bg-white/10 px-3 py-1">建设中</span>
-            <span className="rounded-full bg-white/10 px-3 py-1">四维画像</span>
-            <span className="rounded-full bg-white/10 px-3 py-1">AI 锐评</span>
-          </div>
-          <span className="mt-7 inline-flex cursor-not-allowed items-center gap-2 text-lg font-black text-white">
-            开始 PRO 鉴定
-            <ArrowRight size={18} />
-          </span>
-        </article>
+        <HomeMessageBoard hotTen={boardSlides.hotTen} pin={boardSlides.pin} />
       </section>
 
       <section className="mx-auto max-w-6xl px-5 pb-10">
