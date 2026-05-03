@@ -1,4 +1,5 @@
 import { getD1Database } from "@/lib/cloudflare-db";
+import { getClientIp, getUtcDayString, hashIpForRateLimit } from "@/lib/board-rate-limit";
 
 type BasicAttemptPayload = {
   resultId?: string;
@@ -11,6 +12,7 @@ type BasicAttemptPayload = {
 };
 
 const MIN_RECORDED_DURATION_SECONDS = 30;
+const BASIC_ATTEMPT_DAILY_RECORD_LIMIT = 30;
 
 function isValidPayload(payload: BasicAttemptPayload) {
   return (
@@ -30,6 +32,52 @@ function normalizePayload(payload: BasicAttemptPayload): Required<BasicAttemptPa
   }
 
   return payload as Required<BasicAttemptPayload>;
+}
+
+async function ensureBasicAttemptDailyActionsSchema(db: NonNullable<Awaited<ReturnType<typeof getD1Database>>>) {
+  await db
+    .prepare(
+      `CREATE TABLE IF NOT EXISTS basic_attempt_daily_actions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        day_utc TEXT NOT NULL,
+        ip_hash TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      )`
+    )
+    .run();
+  await db
+    .prepare(
+      `CREATE INDEX IF NOT EXISTS idx_basic_attempt_daily_actions_day_ip
+      ON basic_attempt_daily_actions (day_utc, ip_hash)`
+    )
+    .run();
+}
+
+async function countDailyRecordedAttempts(
+  db: NonNullable<Awaited<ReturnType<typeof getD1Database>>>,
+  dayUtc: string,
+  ipHash: string
+) {
+  const { results } = await db
+    .prepare(`SELECT COUNT(*) AS c FROM basic_attempt_daily_actions WHERE day_utc = ? AND ip_hash = ?`)
+    .bind(dayUtc, ipHash)
+    .all<{ c: number }>();
+
+  const n = results?.[0]?.c;
+
+  return typeof n === "number" ? n : Number(n) || 0;
+}
+
+async function recordDailyRecordedAttempt(
+  db: NonNullable<Awaited<ReturnType<typeof getD1Database>>>,
+  dayUtc: string,
+  ipHash: string,
+  createdAt: string
+) {
+  await db
+    .prepare(`INSERT INTO basic_attempt_daily_actions (day_utc, ip_hash, created_at) VALUES (?, ?, ?)`)
+    .bind(dayUtc, ipHash, createdAt)
+    .run();
 }
 
 export async function POST(request: Request) {
@@ -58,6 +106,25 @@ export async function POST(request: Request) {
   }
 
   try {
+    await ensureBasicAttemptDailyActionsSchema(db);
+
+    const dayUtc = getUtcDayString();
+    const ipHash = await hashIpForRateLimit(getClientIp(request));
+    const used = await countDailyRecordedAttempts(db, dayUtc, ipHash);
+
+    if (used >= BASIC_ATTEMPT_DAILY_RECORD_LIMIT) {
+      return Response.json(
+        {
+          ok: false,
+          reason: "daily-limit-exceeded",
+          message: `同一网络环境下每日最多记录 ${BASIC_ATTEMPT_DAILY_RECORD_LIMIT} 次测试结果，请明日再试。`
+        },
+        { status: 429 }
+      );
+    }
+
+    const createdAt = new Date().toISOString();
+
     await db
       .prepare(
         `INSERT INTO basic_attempts (
@@ -81,9 +148,11 @@ export async function POST(request: Request) {
         validPayload.completedAt,
         validPayload.durationSeconds,
         1,
-        new Date().toISOString()
+        createdAt
       )
       .run();
+
+    await recordDailyRecordedAttempt(db, dayUtc, ipHash, createdAt);
 
     return Response.json({ ok: true, recorded: true });
   } catch {

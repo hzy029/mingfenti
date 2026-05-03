@@ -5,29 +5,21 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { BoardMarkdownBody } from "@/components/board-markdown-body";
 import { BoardMarkdownEditor } from "@/components/board-markdown-editor";
-import { BoardCommentLikeButton } from "@/components/board-comment-like-button";
 import { readBasicTestResultId, useBoardPostPermission } from "@/hooks/use-board-post-permission";
 
 export type BoardCommentPublicRow = {
   id: number;
   author_display: string | null;
   body: string;
-  heat_score: number;
   created_at: string;
 };
 
 type BoardCommentThreadProps = {
   answerId: number;
   comments: BoardCommentPublicRow[];
-  /** 当前访客已赞过的评论 id（服务端按 IP 哈希） */
-  likedCommentIds?: number[];
 };
 
-export function BoardCommentThread({
-  answerId,
-  comments: initialComments,
-  likedCommentIds = []
-}: BoardCommentThreadProps) {
+export function BoardCommentThread({ answerId, comments: initialComments }: BoardCommentThreadProps) {
   const router = useRouter();
   const { ready, canPost } = useBoardPostPermission();
   const [body, setBody] = useState("");
@@ -95,11 +87,6 @@ export function BoardCommentThread({
                 {comment.author_display ?? "匿名"}
                 <span className="ml-2 text-slate-400">{comment.created_at}</span>
               </span>
-              <BoardCommentLikeButton
-                commentId={comment.id}
-                initialAlreadyLiked={likedCommentIds.includes(comment.id)}
-                initialHeat={comment.heat_score}
-              />
             </div>
             <BoardMarkdownBody className="mt-1.5 text-sm" markdown={comment.body} />
           </li>

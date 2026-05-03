@@ -1,14 +1,10 @@
 import Link from "next/link";
-import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { BoardAnswerForm } from "@/components/board-answer-form";
 import { BoardMarkdownBody } from "@/components/board-markdown-body";
 import { BoardCommentThread, type BoardCommentPublicRow } from "@/components/board-comment-thread";
-import { BoardPostLikeButton } from "@/components/board-post-like-button";
 import { SiteHeader } from "@/components/site-header";
 import { ensureBoardReviewSchema } from "@/lib/board-review";
-import { ensureBoardLikesSchema, getLikedTargetIdsForIp } from "@/lib/board-likes";
-import { getClientIpFromHeaderGetter, hashIpForRateLimit } from "@/lib/board-rate-limit";
 import { getD1Database } from "@/lib/cloudflare-db";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +20,6 @@ type PostRow = {
   id: number;
   author_display: string | null;
   body: string;
-  heat_score: number;
   published_at: string | null;
   created_at: string;
 };
@@ -34,7 +29,6 @@ type CommentDbRow = {
   answer_id: number;
   author_display: string | null;
   body: string;
-  heat_score: number;
   created_at: string;
 };
 
@@ -51,7 +45,6 @@ function groupCommentsByAnswer(rows: CommentDbRow[]): Map<number, BoardCommentPu
       id: row.id,
       author_display: row.author_display,
       body: row.body,
-      heat_score: row.heat_score,
       created_at: row.created_at
     });
     map.set(row.answer_id, list);
@@ -88,8 +81,6 @@ export default async function BoardTopicPage({ params }: BoardTopicPageProps) {
   let topicDescription = "";
   let posts: PostRow[] = [];
   let commentsByAnswer = new Map<number, BoardCommentPublicRow[]>();
-  let likedPostIdSet = new Set<number>();
-  let likedCommentIdSet = new Set<number>();
 
   try {
     await ensureBoardReviewSchema(db);
@@ -113,10 +104,10 @@ export default async function BoardTopicPage({ params }: BoardTopicPageProps) {
 
     const postsResult = await db
       .prepare(
-        `SELECT id, author_display, body, heat_score, published_at, created_at
+        `SELECT id, author_display, body, published_at, created_at
       FROM board_posts
       WHERE topic_id = ? AND hidden = 0 AND review_status = 'published'
-      ORDER BY heat_score DESC, published_at DESC, id DESC
+      ORDER BY published_at DESC, id DESC
       LIMIT 20`
       )
       .bind(topicId)
@@ -130,7 +121,7 @@ export default async function BoardTopicPage({ params }: BoardTopicPageProps) {
       const placeholders = answerIds.map(() => "?").join(", ");
       const commentsResult = await db
         .prepare(
-          `SELECT c.id, c.answer_id, c.author_display, c.body, c.heat_score, c.created_at
+          `SELECT c.id, c.answer_id, c.author_display, c.body, c.created_at
         FROM board_comments c
         WHERE c.answer_id IN (${placeholders}) AND c.hidden = 0 AND c.review_status = 'published'
           AND (
@@ -140,38 +131,17 @@ export default async function BoardTopicPage({ params }: BoardTopicPageProps) {
               AND newer.hidden = 0
               AND newer.review_status = 'published'
               AND (
-                newer.heat_score > c.heat_score
-                OR (newer.heat_score = c.heat_score AND newer.published_at > c.published_at)
-                OR (newer.heat_score = c.heat_score AND newer.published_at = c.published_at AND newer.id > c.id)
+                newer.published_at > c.published_at
+                OR (newer.published_at = c.published_at AND newer.id > c.id)
               )
           ) < 3
-        ORDER BY c.answer_id ASC, c.heat_score DESC, c.published_at DESC, c.id DESC`
+        ORDER BY c.answer_id ASC, c.published_at DESC, c.id DESC`
         )
         .bind(...answerIds)
         .all<CommentDbRow>();
 
       commentsByAnswer = groupCommentsByAnswer(commentsResult.results ?? []);
     }
-
-    const headerList = await headers();
-    const ipHash = await hashIpForRateLimit(getClientIpFromHeaderGetter((name) => headerList.get(name)));
-    await ensureBoardLikesSchema(db);
-
-    const postIdList = posts.map((p) => p.id);
-    likedPostIdSet =
-      postIdList.length > 0 ? await getLikedTargetIdsForIp(db, "post", postIdList, ipHash) : new Set<number>();
-
-    const allCommentIds: number[] = [];
-    for (const p of posts) {
-      for (const c of commentsByAnswer.get(p.id) ?? []) {
-        allCommentIds.push(c.id);
-      }
-    }
-
-    likedCommentIdSet =
-      allCommentIds.length > 0
-        ? await getLikedTargetIdsForIp(db, "comment", allCommentIds, ipHash)
-        : new Set<number>();
   } catch {
     return (
       <main className="min-h-screen bg-[#f8fafc] text-slate-900">
@@ -230,18 +200,9 @@ export default async function BoardTopicPage({ params }: BoardTopicPageProps) {
                   )}
                   <span className="ml-2 text-slate-400">{post.created_at}</span>
                 </div>
-                <BoardPostLikeButton
-                  initialAlreadyLiked={likedPostIdSet.has(post.id)}
-                  initialHeat={post.heat_score}
-                  postId={post.id}
-                />
               </div>
               <BoardMarkdownBody className="mt-4" markdown={post.body} />
-              <BoardCommentThread
-                answerId={post.id}
-                comments={commentsByAnswer.get(post.id) ?? []}
-                likedCommentIds={Array.from(likedCommentIdSet)}
-              />
+              <BoardCommentThread answerId={post.id} comments={commentsByAnswer.get(post.id) ?? []} />
             </article>
           ))}
         </section>

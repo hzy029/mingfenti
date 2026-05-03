@@ -17,6 +17,16 @@ CREATE INDEX IF NOT EXISTS idx_basic_attempts_result_id
 CREATE INDEX IF NOT EXISTS idx_basic_attempts_created_at
   ON basic_attempts (created_at);
 
+CREATE TABLE IF NOT EXISTS basic_attempt_daily_actions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  day_utc TEXT NOT NULL,
+  ip_hash TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_basic_attempt_daily_actions_day_ip
+  ON basic_attempt_daily_actions (day_utc, ip_hash);
+
 CREATE TABLE IF NOT EXISTS board_topics (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   title TEXT NOT NULL,

@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { getD1Database } from "@/lib/cloudflare-db";
 
 export type BasicStatsDistributionItem = {
@@ -70,7 +71,7 @@ export function getEmptyBasicStats(): BasicStats {
   return buildStats({});
 }
 
-export async function getBasicStats(): Promise<BasicStats> {
+async function loadBasicStats(): Promise<BasicStats> {
   const db = await getD1Database();
 
   if (!db) {
@@ -102,3 +103,7 @@ export async function getBasicStats(): Promise<BasicStats> {
     return getEmptyBasicStats();
   }
 }
+
+export const getBasicStats = unstable_cache(loadBasicStats, ["basic-stats"], {
+  revalidate: 600
+});

@@ -2,7 +2,7 @@
 
 import { ArrowRight, ChevronLeft, ChevronRight, FlaskConical } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { HomeMessageBoard } from "@/components/home-message-board";
 import type { BoardHomeSlide } from "@/lib/board-home-data";
 
@@ -11,36 +11,9 @@ type HomeTestBoardCarouselProps = {
   hotTen: BoardHomeSlide[];
 };
 
-export function HomeTestBoardCarousel({ pin, hotTen }: HomeTestBoardCarouselProps) {
+export function HomeTestBoardCarousel({ pin }: HomeTestBoardCarouselProps) {
   const [panel, setPanel] = useState(0);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const restartTimer = useCallback(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-    }
-
-    timerRef.current = setInterval(() => {
-      setPanel((p) => (p + 1) % 2);
-    }, 10_000);
-  }, []);
-
-  useEffect(() => {
-    restartTimer();
-
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
-  }, [restartTimer]);
-
-  const goTo = (next: number) => {
-    setPanel(next);
-    restartTimer();
-  };
-
-  const flip = () => goTo((panel + 1) % 2);
+  const flip = () => setPanel((panel + 1) % 2);
 
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
@@ -52,7 +25,7 @@ export function HomeTestBoardCarousel({ pin, hotTen }: HomeTestBoardCarouselProp
               panel === 0 ? "bg-[#4937db] text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             ].join(" ")}
             type="button"
-            onClick={() => goTo(0)}
+            onClick={() => setPanel(0)}
           >
             留言板
           </button>
@@ -62,12 +35,12 @@ export function HomeTestBoardCarousel({ pin, hotTen }: HomeTestBoardCarouselProp
               panel === 1 ? "bg-[#4937db] text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             ].join(" ")}
             type="button"
-            onClick={() => goTo(1)}
+            onClick={() => setPanel(1)}
           >
             标准鉴定
           </button>
         </div>
-        <p className="text-xs font-bold text-slate-400">每 10 秒自动切换 · 可点标签或箭头</p>
+        <p className="text-xs font-bold text-slate-400">可点标签或箭头切换</p>
         <div className="flex items-center gap-2">
           <button
             aria-label="上一屏"
@@ -88,9 +61,9 @@ export function HomeTestBoardCarousel({ pin, hotTen }: HomeTestBoardCarouselProp
         </div>
       </div>
 
-      <div className="relative min-h-[360px] pt-6">
+      <div className="relative min-h-[300px] pt-6">
         <div className={panel === 0 ? "block" : "hidden"}>
-          <HomeMessageBoard embedded hotTen={hotTen} pin={pin} />
+          <HomeMessageBoard embedded pin={pin} />
         </div>
         <div className={panel === 1 ? "block" : "hidden"}>
           <HomeStandardTestPanel />

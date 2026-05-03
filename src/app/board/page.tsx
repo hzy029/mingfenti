@@ -38,7 +38,7 @@ export default async function BoardIndexPage() {
               SELECT p.body
               FROM board_posts p
               WHERE p.topic_id = t.id AND p.hidden = 0 AND p.review_status = 'published'
-              ORDER BY p.heat_score DESC, p.published_at DESC, p.id DESC
+              ORDER BY p.published_at DESC, p.id DESC
               LIMIT 1
             ) AS hot_preview_body
           FROM board_topics t
