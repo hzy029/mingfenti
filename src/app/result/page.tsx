@@ -1,15 +1,19 @@
 "use client";
 
-import { ArrowRight, Download, Home, MessageSquare, RotateCcw } from "lucide-react";
+import { ArrowRight, Download, MessageSquare, RotateCcw } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import QRCode from "qrcode";
 import { useMemo, useState, useSyncExternalStore } from "react";
+import { SiteHeader } from "@/components/site-header";
 import { BASIC_TEST_MAX_AXIS_SCORE } from "@/data/basic-test-config";
 import { basicResultTiers } from "@/data/basic-results";
 import type { BasicResultTier } from "@/data/types";
 import { BASIC_TEST_SESSION_STORAGE_KEY, type BasicTestSession } from "@/lib/basic-test-session";
 
 const RESULT_DOWNLOAD_FILENAME = "明粉检测器ti-测试结果.png";
+const SHARE_SITE_LABEL = "mingfen.sbs";
+const SHARE_SITE_URL = "https://mingfen.sbs/";
 
 const resultVisuals: Record<string, { image: string; tone: string; color: string; background: string }> = {
   "objective-neutral": { image: "/icons/中立理性.png", tone: "客观中立", color: "#18c48f", background: "#e8f8f4" },
@@ -65,15 +69,6 @@ function getSessionSnapshot(): BasicTestSession | null {
 
 function getServerSessionSnapshot() {
   return null;
-}
-
-function formatToday() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-
-  return `${year}/${month}/${day}`;
 }
 
 function ScoreBar({ label, value }: { label: string; value: number }) {
@@ -192,7 +187,16 @@ async function downloadResultImage({
   }
 
   const resultImage = await loadCanvasImage(imageSrc);
-  const today = formatToday();
+  const qrDataUrl = await QRCode.toDataURL(SHARE_SITE_URL, {
+    errorCorrectionLevel: "M",
+    margin: 1,
+    scale: 8,
+    color: {
+      dark: "#15120d",
+      light: "#ffffff"
+    }
+  });
+  const qrImage = await loadCanvasImage(qrDataUrl);
 
   context.fillStyle = "#f7f4ee";
   context.fillRect(0, 0, canvas.width, canvas.height);
@@ -230,11 +234,15 @@ async function downloadResultImage({
   context.font = "400 30px sans-serif";
   drawWrappedText(context, result.summary, 136, 940, 920, 48);
 
+  context.fillStyle = "#ffffff";
+  context.fillRect(892, 1138, 164, 164);
+  drawContainedImage(context, qrImage, 904, 1150, 140, 140);
+
   context.fillStyle = "#c2c8d4";
   context.font = "700 24px sans-serif";
-  context.fillText(today, 136, 1230);
+  context.fillText(SHARE_SITE_LABEL, 136, 1230);
   context.textAlign = "right";
-  context.fillText("b站解雨泽熙", 1056, 1230);
+  context.fillText("b站解雨泽熙", 860, 1230);
   context.textAlign = "left";
 
   const blob = await new Promise<Blob>((resolve, reject) => {
@@ -262,7 +270,6 @@ export default function BasicResultPage() {
   const session = useSyncExternalStore(subscribeToSessionChanges, getSessionSnapshot, getServerSessionSnapshot);
   const result = useMemo(() => (session ? findResult(session.resultId) : undefined), [session]);
   const visual = result ? resultVisuals[result.id] : undefined;
-  const today = formatToday();
 
   async function handleDownload() {
     if (!session || !result || !visual) {
@@ -282,8 +289,9 @@ export default function BasicResultPage() {
 
   if (!session || !result || !visual) {
     return (
-      <main className="min-h-screen bg-[#f7f4ee] px-5 py-8 text-[#15120d]">
-        <section className="mx-auto max-w-3xl rounded-lg border border-[#15120d]/10 bg-white p-6 shadow-sm">
+      <main className="min-h-screen bg-[#f7f4ee] text-[#15120d]">
+        <SiteHeader />
+        <section className="mx-auto mt-8 max-w-3xl rounded-lg border border-[#15120d]/10 bg-white p-6 shadow-sm">
           <h1 className="text-3xl font-black">没有找到答题记录</h1>
           <p className="mt-4 leading-7 text-[#4e4639]">请先完成普通测试，再查看结果。</p>
           <Link className="mt-6 inline-flex items-center gap-2 rounded-md bg-[#b72f24] px-5 py-3 font-bold text-white" href="/test">
@@ -297,25 +305,25 @@ export default function BasicResultPage() {
 
   return (
     <main className="min-h-screen bg-[#f7f4ee] text-[#15120d]">
-      <div className="mx-auto w-full max-w-5xl px-5 py-6">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#15120d]/10 pb-4">
-          <Link className="inline-flex items-center gap-2 text-sm font-bold text-[#4e4639]" href="/">
-            <Home size={16} />
-            返回首页
-          </Link>
-        </header>
-
-        <section className="mt-6 overflow-hidden rounded-3xl border border-[#15120d]/10 bg-white shadow-lg">
-          <div className="grid gap-6 p-8 md:grid-cols-[1fr_300px]" style={{ backgroundColor: visual.background }}>
-            <div>
-              <p className="text-sm font-black text-[#7a1f18]">普通版测试结果</p>
-              <h1 className="mt-4 text-5xl font-black leading-tight md:text-6xl">{result.title}</h1>
-              <p className="mt-4 inline-flex rounded-full bg-white/70 px-4 py-2 text-lg font-black" style={{ color: visual.color }}>
+      <SiteHeader />
+      <div className="mx-auto w-full max-w-5xl px-3 py-3 sm:px-5 sm:py-6">
+        <section className="overflow-hidden rounded-2xl border border-[#15120d]/10 bg-white shadow-lg sm:rounded-3xl">
+          <div
+            className="grid grid-cols-[minmax(0,1fr)_7rem] items-center gap-3 p-4 sm:gap-6 sm:p-8 md:grid-cols-[1fr_300px]"
+            style={{ backgroundColor: visual.background }}
+          >
+            <div className="min-w-0">
+              <p className="text-xs font-black text-[#7a1f18] sm:text-sm">普通版测试结果</p>
+              <h1 className="mt-2 text-4xl font-black leading-tight sm:mt-4 sm:text-5xl md:text-6xl">{result.title}</h1>
+              <p
+                className="mt-3 inline-flex rounded-full bg-white/70 px-3 py-1.5 text-base font-black sm:mt-4 sm:px-4 sm:py-2 sm:text-lg"
+                style={{ color: visual.color }}
+              >
                 {visual.tone}
               </p>
             </div>
             <div className="flex items-center justify-center">
-              <div className="flex h-64 w-64 items-center justify-center rounded-2xl bg-white/75 p-4">
+              <div className="flex h-28 w-28 items-center justify-center rounded-xl bg-white/75 p-2 sm:h-64 sm:w-64 sm:rounded-2xl sm:p-4">
                 <Image
                   alt={result.title}
                   className="h-full w-full object-contain"
@@ -328,55 +336,51 @@ export default function BasicResultPage() {
             </div>
           </div>
 
-          <div className="p-8">
+          <div className="p-4 sm:p-8">
             <section>
-              <h2 className="text-xl font-black">分数</h2>
-              <div className="mt-5 grid gap-5">
+              <h2 className="text-lg font-black sm:text-xl">分数</h2>
+              <div className="mt-3 grid gap-3 sm:mt-5 sm:gap-5">
                 <ScoreBar label="历史了解程度" value={session.score.historyKnowledge} />
                 <ScoreBar label="明朝偏向程度" value={session.score.mingPreference} />
               </div>
             </section>
 
-            <section className="mt-8 border-t border-[#15120d]/10 pt-8">
-              <h2 className="text-xl font-black text-[#8790a3]">诊断结果</h2>
-              <p className="mt-4 text-lg font-bold leading-9 text-[#25211b]">{result.summary}</p>
+            <section className="mt-4 grid grid-cols-3 gap-2 sm:mt-8 sm:gap-4">
+              <button
+                className="inline-flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg bg-[#2563eb] px-2 py-2.5 text-xs font-black leading-tight text-white transition hover:bg-[#1d4ed8] disabled:cursor-wait disabled:opacity-70 sm:flex-row sm:gap-2 sm:px-5 sm:py-4 sm:text-lg"
+                disabled={isDownloading}
+                type="button"
+                onClick={handleDownload}
+              >
+                <Download className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />
+                <span>{isDownloading ? "生成中" : "保存图片"}</span>
+              </button>
+              <Link
+                className="inline-flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg bg-[#475569] px-2 py-2.5 text-xs font-black leading-tight text-white transition hover:bg-[#334155] sm:flex-row sm:gap-2 sm:px-5 sm:py-4 sm:text-lg"
+                href="/test"
+              >
+                <RotateCcw className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />
+                <span>重新测试</span>
+              </Link>
+              <Link
+                className="inline-flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg border-2 border-[#6366f1] bg-[#eef1ff] px-2 py-2.5 text-xs font-black leading-tight text-[#4338ca] transition hover:bg-[#e0e7ff] sm:flex-row sm:gap-2 sm:px-5 sm:py-4 sm:text-lg"
+                href="/board"
+              >
+                <MessageSquare className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />
+                <span>留言板</span>
+              </Link>
             </section>
 
-            <footer className="mt-10 flex items-center justify-between border-t border-[#15120d]/10 pt-6 text-sm font-bold text-[#c2c8d4]">
-              <span>{today}</span>
+            <section className="mt-5 border-t border-[#15120d]/10 pt-5 sm:mt-8 sm:pt-8">
+              <h2 className="text-lg font-black text-[#8790a3] sm:text-xl">诊断结果</h2>
+              <p className="mt-3 text-base font-bold leading-8 text-[#25211b] sm:mt-4 sm:text-lg sm:leading-9">{result.summary}</p>
+            </section>
+
+            <footer className="mt-6 flex items-center justify-between border-t border-[#15120d]/10 pt-4 text-sm font-bold text-[#c2c8d4] sm:mt-10 sm:pt-6">
+              <span>{SHARE_SITE_LABEL}</span>
               <span>b站解雨泽熙</span>
             </footer>
           </div>
-        </section>
-
-        <section className="mt-6 grid gap-4 md:grid-cols-2">
-          <button
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#2563eb] px-5 py-4 text-lg font-black text-white transition hover:bg-[#1d4ed8] disabled:cursor-wait disabled:opacity-70"
-            disabled={isDownloading}
-            type="button"
-            onClick={handleDownload}
-          >
-            <Download size={22} />
-            {isDownloading ? "正在生成图片..." : "保存结果图片"}
-          </button>
-          <Link
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#475569] px-5 py-4 text-lg font-black text-white transition hover:bg-[#334155]"
-            href="/test"
-          >
-            <RotateCcw size={22} />
-            重新测试
-          </Link>
-        </section>
-
-        <section className="mt-4 flex flex-col items-center border-t border-[#15120d]/10 pt-6 pb-10">
-          <Link
-            className="inline-flex w-full max-w-md items-center justify-center gap-2 rounded-2xl border-2 border-[#6366f1] bg-[#eef1ff] px-5 py-4 text-lg font-black text-[#4338ca] transition hover:bg-[#e0e7ff]"
-            href="/board"
-          >
-            <MessageSquare size={22} />
-            前往留言板
-          </Link>
-          <p className="mt-3 text-center text-sm font-bold text-[#5d5447]">通过检测后，欢迎到留言板参与讨论</p>
         </section>
       </div>
     </main>
