@@ -9,18 +9,19 @@ import { SiteHeader } from "@/components/site-header";
 import { BASIC_TEST_MAX_AXIS_SCORE } from "@/data/basic-test-config";
 import { basicResultTiers } from "@/data/basic-results";
 import type { BasicResultTier } from "@/data/types";
-import { BASIC_TEST_SESSION_STORAGE_KEY, type BasicTestSession } from "@/lib/basic-test-session";
+import { BASIC_TEST_SESSION_STORAGE_KEY, parseBasicTestSession, type BasicTestSession } from "@/lib/basic-test-session";
 
 const RESULT_DOWNLOAD_FILENAME = "明粉检测器ti-测试结果.png";
 const SHARE_SITE_LABEL = "mingfen.sbs";
 const SHARE_SITE_URL = "https://mingfen.sbs/";
 
 const resultVisuals: Record<string, { image: string; tone: string; color: string; background: string }> = {
-  "objective-neutral": { image: "/icons/中立理性.png", tone: "客观中立", color: "#18c48f", background: "#e8f8f4" },
+  "objective-neutral": { image: "/icons/中立理性.png", tone: "中立客观", color: "#18c48f", background: "#e8f8f4" },
   "manchu-loyalist": { image: "/icons/八旗.png", tone: "满遗", color: "#18c48f", background: "#e8f8f4" },
+  "qing-fan": { image: "/icons/八旗.png", tone: "清粉", color: "#0d9488", background: "#e6fffa" },
   "ming-leaning-moe": { image: "/icons/萌萌人.png", tone: "萌萌人", color: "#f59e0b", background: "#fff7e8" },
   "old-ming-fan": { image: "/icons/旧明粉.png", tone: "旧明粉", color: "#94a3b8", background: "#eef2f7" },
-  "new-ming-fan": { image: "/icons/新明粉.png", tone: "汉服鹿角妈妈窝", color: "#6366f1", background: "#eef1ff" },
+  "new-ming-fan": { image: "/icons/新明粉.png", tone: "皇汉瓜粉西史辩伪", color: "#6366f1", background: "#eef1ff" },
   "zhu-yuanzhang-dreamer": {
     image: "/icons/朱元璋梦男.png",
     tone: "所有心理问题都是性压抑",
@@ -55,31 +56,56 @@ function getSessionSnapshot(): BasicTestSession | null {
     return cachedSession;
   }
 
-  try {
-    cachedSessionRaw = storedSession;
-    cachedSession = JSON.parse(storedSession) as BasicTestSession;
-    return cachedSession;
-  } catch {
+  const parsed = parseBasicTestSession(storedSession);
+  cachedSessionRaw = storedSession;
+  cachedSession = parsed;
+
+  if (!parsed) {
     window.localStorage.removeItem(BASIC_TEST_SESSION_STORAGE_KEY);
     cachedSessionRaw = null;
     cachedSession = null;
-    return null;
   }
+
+  return parsed;
+}
+
+function getRetestHref(session: BasicTestSession): string {
+  return session.testVariant === "lite" ? "/test" : "/pro-test";
+}
+
+function getTestModeLabel(session: BasicTestSession): string {
+  return session.testVariant === "lite" ? "普通版（判断）" : "Pro 版";
+}
+
+function getScoreAxisMeta(session: BasicTestSession): {
+  max: number;
+  hkLabel: string;
+  mpLabel: string;
+} {
+  const max = BASIC_TEST_MAX_AXIS_SCORE;
+  if (session.testVariant === "lite") {
+    return {
+      max,
+      hkLabel: "理性程度（材料与制度分析）",
+      mpLabel: "明朝偏向程度"
+    };
+  }
+  return { max, hkLabel: "历史了解程度", mpLabel: "明朝偏向程度" };
 }
 
 function getServerSessionSnapshot() {
   return null;
 }
 
-function ScoreBar({ label, value }: { label: string; value: number }) {
-  const percent = Math.round((value / BASIC_TEST_MAX_AXIS_SCORE) * 100);
+function ScoreBar({ label, value, max }: { label: string; value: number; max: number }) {
+  const percent = Math.round((value / max) * 100);
 
   return (
     <div>
       <div className="mb-2 flex items-center justify-between text-sm font-bold">
         <span>{label}</span>
         <span>
-          {value} / {BASIC_TEST_MAX_AXIS_SCORE}
+          {value} / {max}
         </span>
       </div>
       <div className="h-3 overflow-hidden rounded-full bg-[#15120d]/10">
@@ -150,15 +176,16 @@ function drawShareScoreBar(
   value: number,
   x: number,
   y: number,
-  width: number
+  width: number,
+  max: number
 ) {
-  const percent = value / BASIC_TEST_MAX_AXIS_SCORE;
+  const percent = max > 0 ? value / max : 0;
 
   context.fillStyle = "#15120d";
   context.font = "700 26px sans-serif";
   context.fillText(label, x, y);
   context.textAlign = "right";
-  context.fillText(`${value} / ${BASIC_TEST_MAX_AXIS_SCORE}`, x + width, y);
+  context.fillText(`${value} / ${max}`, x + width, y);
   context.textAlign = "left";
   context.fillStyle = "#e7e1d8";
   context.fillRect(x, y + 18, width, 16);
@@ -170,12 +197,14 @@ async function downloadResultImage({
   result,
   session,
   imageSrc,
-  visual
+  visual,
+  testModeLabel
 }: {
   result: BasicResultTier;
   session: BasicTestSession;
   imageSrc: string;
   visual: { tone: string; color: string; background: string };
+  testModeLabel: string;
 }) {
   const canvas = document.createElement("canvas");
   canvas.width = 1200;
@@ -209,7 +238,7 @@ async function downloadResultImage({
 
   context.fillStyle = "#7a1f18";
   context.font = "800 28px sans-serif";
-  context.fillText("普通版测试结果", 136, 140);
+  context.fillText(`${testModeLabel}测试结果`, 136, 140);
 
   context.fillStyle = "#15120d";
   context.font = "900 72px sans-serif";
@@ -224,8 +253,9 @@ async function downloadResultImage({
   context.fillStyle = "#15120d";
   context.font = "900 38px sans-serif";
   context.fillText("分数", 136, 590);
-  drawShareScoreBar(context, "历史了解程度", session.score.historyKnowledge, 136, 660, 920);
-  drawShareScoreBar(context, "明朝偏向程度", session.score.mingPreference, 136, 740, 920);
+  const axis = getScoreAxisMeta(session);
+  drawShareScoreBar(context, axis.hkLabel, session.score.historyKnowledge, 136, 660, 920, axis.max);
+  drawShareScoreBar(context, axis.mpLabel, session.score.mingPreference, 136, 740, 920, axis.max);
 
   context.fillStyle = "#15120d";
   context.font = "900 38px sans-serif";
@@ -279,7 +309,13 @@ export default function BasicResultPage() {
     setIsDownloading(true);
 
     try {
-      await downloadResultImage({ result, session, imageSrc: visual.image, visual });
+      await downloadResultImage({
+        result,
+        session,
+        imageSrc: visual.image,
+        visual,
+        testModeLabel: getTestModeLabel(session)
+      });
     } catch {
       window.alert("生成结果图片失败，请稍后再试。");
     } finally {
@@ -293,11 +329,23 @@ export default function BasicResultPage() {
         <SiteHeader />
         <section className="mx-auto mt-8 max-w-3xl rounded-lg border border-[#15120d]/10 bg-white p-6 shadow-sm">
           <h1 className="text-3xl font-black">没有找到答题记录</h1>
-          <p className="mt-4 leading-7 text-[#4e4639]">请先完成普通测试，再查看结果。</p>
-          <Link className="mt-6 inline-flex items-center gap-2 rounded-md bg-[#b72f24] px-5 py-3 font-bold text-white" href="/test">
-            开始普通测试
-            <ArrowRight size={18} />
-          </Link>
+          <p className="mt-4 leading-7 text-[#4e4639]">请先完成普通测试（判断）或 Pro 测试，再查看结果。</p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link
+              className="inline-flex items-center gap-2 rounded-md bg-[#b72f24] px-5 py-3 font-bold text-white"
+              href="/test"
+            >
+              普通测试
+              <ArrowRight size={18} />
+            </Link>
+            <Link
+              className="inline-flex items-center gap-2 rounded-md border-2 border-[#4937db] bg-[#eef1ff] px-5 py-3 font-bold text-[#4338ca]"
+              href="/pro-test"
+            >
+              Pro 测试
+              <ArrowRight size={18} />
+            </Link>
+          </div>
         </section>
       </main>
     );
@@ -313,7 +361,7 @@ export default function BasicResultPage() {
             style={{ backgroundColor: visual.background }}
           >
             <div className="min-w-0">
-              <p className="text-xs font-black text-[#7a1f18] sm:text-sm">普通版测试结果</p>
+              <p className="text-xs font-black text-[#7a1f18] sm:text-sm">{getTestModeLabel(session)}测试结果</p>
               <h1 className="mt-2 text-4xl font-black leading-tight sm:mt-4 sm:text-5xl md:text-6xl">{result.title}</h1>
               <p
                 className="mt-3 inline-flex rounded-full bg-white/70 px-3 py-1.5 text-base font-black sm:mt-4 sm:px-4 sm:py-2 sm:text-lg"
@@ -340,8 +388,15 @@ export default function BasicResultPage() {
             <section>
               <h2 className="text-lg font-black sm:text-xl">分数</h2>
               <div className="mt-3 grid gap-3 sm:mt-5 sm:gap-5">
-                <ScoreBar label="历史了解程度" value={session.score.historyKnowledge} />
-                <ScoreBar label="明朝偏向程度" value={session.score.mingPreference} />
+                {(() => {
+                  const axis = getScoreAxisMeta(session);
+                  return (
+                    <>
+                      <ScoreBar label={axis.hkLabel} max={axis.max} value={session.score.historyKnowledge} />
+                      <ScoreBar label={axis.mpLabel} max={axis.max} value={session.score.mingPreference} />
+                    </>
+                  );
+                })()}
               </div>
             </section>
 
@@ -357,7 +412,7 @@ export default function BasicResultPage() {
               </button>
               <Link
                 className="inline-flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg bg-[#475569] px-2 py-2.5 text-xs font-black leading-tight text-white transition hover:bg-[#334155] sm:flex-row sm:gap-2 sm:px-5 sm:py-4 sm:text-lg"
-                href="/test"
+                href={getRetestHref(session)}
               >
                 <RotateCcw className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />
                 <span>重新测试</span>

@@ -35,7 +35,9 @@ function isScoreInRange(score: BasicScore, result: BasicResultTier): boolean {
 
 function getBaseTierMap(): Map<BasicResultId, BasicResultTier> {
   return new Map(
-    basicResultTiers.filter((result) => !result.sourceResultId).map((tier) => [tier.id, tier])
+    basicResultTiers
+      .filter((result) => !result.sourceResultId && result.id !== "qing-fan")
+      .map((tier) => [tier.id, tier])
   );
 }
 

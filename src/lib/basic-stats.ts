@@ -24,9 +24,10 @@ type BasicAttemptCountRow = {
 
 const RESULT_DISTRIBUTION_TEMPLATE = [
   { key: "neutral", label: "中立正常", color: "#18c48f", tone: "理性客观", image: "/icons/大笑奶龙.png" },
+  { key: "manchu", label: "清粉反明", color: "#525252", tone: "不理性,不客观", image: "/icons/八旗.png" },
   { key: "moe", label: "萌萌人", color: "#f59e0b", tone: "纯路人", image: "/icons/萌萌人.png" },
   { key: "old", label: "旧明粉", color: "#94a3b8", tone: "已被抬旗", image: "/icons/旧明粉.png" },
-  { key: "new", label: "新明粉", color: "#6366f1", tone: "汉服鹿角妈妈窝", image: "/icons/新明粉.png" },
+  { key: "new", label: "新明粉", color: "#6366f1", tone: "皇汉瓜粉西史辩伪", image: "/icons/新明粉.png" },
   {
     key: "dreamer",
     label: "朱元璋梦男",
@@ -38,7 +39,7 @@ const RESULT_DISTRIBUTION_TEMPLATE = [
 
 const RESULT_ID_TO_DISTRIBUTION_KEY: Record<string, (typeof RESULT_DISTRIBUTION_TEMPLATE)[number]["key"]> = {
   "objective-neutral": "neutral",
-  "manchu-loyalist": "neutral",
+  "manchu-loyalist": "manchu",
   "ming-leaning-moe": "moe",
   "old-ming-fan": "old",
   "new-ming-fan": "new",
@@ -104,6 +105,6 @@ async function loadBasicStats(): Promise<BasicStats> {
   }
 }
 
-export const getBasicStats = unstable_cache(loadBasicStats, ["basic-stats"], {
+export const getBasicStats = unstable_cache(loadBasicStats, ["basic-stats-v4"], {
   revalidate: 600
 });

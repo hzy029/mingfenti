@@ -10,10 +10,10 @@ export const basicResultTiers: BasicResultTier[] = [
     id: "objective-neutral",
     historyKnowledge: { min: 0, max: 78 },
     mingPreference: { min: 0, max: 26 },
-    title: "客观中立",
+    title: "中立客观",
     summary:
-      "你对明清史的判断整体不太被朝代身份牵着走，对明代的财政、货币、户籍、海禁和宋进明退等理论有较为深刻的认识。",
-    shareText: "我测出来是客观中立——先看材料和制度后果，再谈朝代滤镜。"
+      "理性程度（材料、制度后果与跨朝比较）较高，明朝情绪滤镜较淡；判断更依赖史料与机制而非站队话术。",
+    shareText: "我测出来是中立客观——先看材料和制度后果，再谈朝代滤镜。"
   },
   {
     id: "manchu-loyalist",
@@ -24,7 +24,7 @@ export const basicResultTiers: BasicResultTier[] = [
     title: "满遗",
     summary:
       "你对明朝的黑点了如指掌，一看就是满遗，八旗自己选个旗吧。",
-    shareText: "我测出来是满遗，系统说这是客观中立的 10% 抬旗彩蛋。"
+    shareText: "我测出来是满遗，系统说这是中立客观的 10% 抬旗彩蛋。"
   },
   {
     id: "ming-leaning-moe",
@@ -59,7 +59,16 @@ export const basicResultTiers: BasicResultTier[] = [
     mingPreference: { min: 66, max: 78 },
     title: "朱元璋梦男",
     summary:
-      "判断力很准确，不会被明黑的话术迷惑，快去留言榜（待更新）分享自己的经验。",
+      "极端洪武祖制与「再造华夏」话术高度内化，理性拆解与材料链让位于身份站队；较新明粉更拒斥对明初制度的批评性分析。",
     shareText: "我测出来是朱元璋梦男，洪武祖制已经写进 DNA。"
+  },
+  {
+    id: "qing-fan",
+    historyKnowledge: { min: 0, max: 78 },
+    mingPreference: { min: 0, max: 78 },
+    title: "清粉",
+    summary:
+      "理性程度与明朝偏向双低：对明代制度与史料讨论投入少，同时缺乏对明朝的基本叙事好感，更接近清本位或「反明」站队而非材料导向的中立分析。",
+    shareText: "我测出来是清粉——理性与明粉两头都不占。"
   }
 ];

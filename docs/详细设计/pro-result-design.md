@@ -3,6 +3,8 @@
 版本：v0.1  
 日期：2026-04-30
 
+> **状态（2026-05）**：**已废止。** 当前产品中的 **Pro** 指 **双轴四选一** 测验，结果见 [`basic-results.ts`](../../src/data/basic-results.ts) 与 [`pro-evaluation-standard.md`](./pro-evaluation-standard.md)。本文仅保留历史草案，**不作验收依据**。
+
 ## 1. 四维
 
 - 西方中心主义

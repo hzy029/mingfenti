@@ -2,7 +2,7 @@ import { ArrowRight, BarChart3, FlaskConical } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { HomeAnnouncementModal } from "@/components/home-announcement-modal";
-import { HomeTestBoardCarousel } from "@/components/home-test-board-carousel";
+import { HomeTestAndBoardSection } from "@/components/home-test-and-board-section";
 import { SiteHeader } from "@/components/site-header";
 import { siteConfig } from "@/data/site-config";
 import { getBoardHomeSlides } from "@/lib/board-home-data";
@@ -67,13 +67,16 @@ export default async function HomePage() {
               className="inline-flex min-w-56 items-center justify-center gap-2 rounded-2xl bg-[#6567f2] px-8 py-5 text-2xl font-black text-white shadow-xl shadow-[#6567f2]/25"
               href="/test"
             >
-              开始测试
+              普通测试
               <ArrowRight size={24} />
             </Link>
-            <span className="inline-flex min-w-72 cursor-not-allowed items-center justify-center gap-3 rounded-2xl border border-white/20 bg-white/10 px-8 py-5 text-2xl font-black text-white/90">
+            <Link
+              className="inline-flex min-w-56 items-center justify-center gap-2 rounded-2xl border-2 border-white/40 bg-white/15 px-8 py-5 text-2xl font-black text-white shadow-lg transition hover:bg-white/25"
+              href="/pro-test"
+            >
               <FlaskConical size={28} />
-              PRO 深度鉴定
-            </span>
+              Pro 测试
+            </Link>
           </div>
 
           <div className="mt-16 grid w-full max-w-2xl grid-cols-3 gap-6 text-center">
@@ -94,7 +97,7 @@ export default async function HomePage() {
       </div>
 
       <section className="mx-auto max-w-6xl px-5 py-16">
-        <HomeTestBoardCarousel hotTen={boardSlides.hotTen} pin={boardSlides.pin} />
+        <HomeTestAndBoardSection pin={boardSlides.pin} />
       </section>
 
       <section className="mx-auto max-w-6xl px-5 pb-10">
@@ -103,7 +106,7 @@ export default async function HomePage() {
             <BarChart3 size={30} />
             全站测试分布
           </h2>
-          <p className="mt-2 text-lg text-slate-500">基于所有用户的标准测试结果</p>
+          <p className="mt-2 text-lg text-slate-500">基于匿名测验提交（普通版或 Pro 版共用档位）</p>
 
           <div className="mt-10 grid items-center gap-10 md:grid-cols-[220px_1fr]">
             <div className="relative mx-auto h-44 w-44 rounded-full" style={{ background: donutBackground }}>
@@ -133,9 +136,9 @@ export default async function HomePage() {
 
       <section className="mx-auto max-w-6xl px-5 pb-16 text-center">
         <h2 className="text-3xl font-black">你会得到哪种结果?</h2>
-        <p className="mt-3 text-lg font-bold text-slate-400">测试结果分为五个类型</p>
+        <p className="mt-3 text-lg font-bold text-slate-400">测试结果分为六个类型</p>
 
-        <div className="mt-10 grid gap-5 md:grid-cols-5">
+        <div className="mt-10 grid gap-5 md:grid-cols-6">
           {stats.distribution.map((item) => (
             <article
               key={item.label}

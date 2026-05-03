@@ -3,9 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { SiteHeader } from "@/components/site-header";
-import { BASIC_TEST_SESSION_STORAGE_KEY } from "@/lib/basic-test-session";
+import { BASIC_TEST_SESSION_STORAGE_KEY, parseBasicTestSession } from "@/lib/basic-test-session";
 
-/** 展示「答题完成」后，等待若干秒再进入结果页 */
 const REDIRECT_SECONDS = 3;
 
 export default function TestCompletePage() {
@@ -17,7 +16,8 @@ export default function TestCompletePage() {
       return;
     }
 
-    if (!window.localStorage.getItem(BASIC_TEST_SESSION_STORAGE_KEY)) {
+    const session = parseBasicTestSession(window.localStorage.getItem(BASIC_TEST_SESSION_STORAGE_KEY));
+    if (!session || session.testVariant !== "lite") {
       router.replace("/test");
       return;
     }
@@ -40,7 +40,7 @@ export default function TestCompletePage() {
     <div className="min-h-screen bg-[#f7f4ee] text-[#15120d]">
       <SiteHeader />
       <main className="mx-auto flex min-h-[calc(100vh-74px)] w-full max-w-lg flex-col items-center justify-center px-5 py-12 text-center">
-        <p className="text-sm font-black text-[#7a1f18]">普通版检测</p>
+        <p className="text-sm font-black text-[#7a1f18]">普通版（判断）</p>
         <h1 className="mt-3 text-4xl font-black leading-tight md:text-5xl">答题完成</h1>
         <p className="mt-6 text-lg font-bold leading-8 text-[#4e4639]">正在为你生成结果，请稍候…</p>
         <p className="mt-4 text-2xl font-black text-[#b72f24]">

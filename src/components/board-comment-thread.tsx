@@ -97,11 +97,15 @@ export function BoardCommentThread({ answerId, comments: initialComments }: Boar
         <p className="mt-4 text-xs font-bold text-slate-500">加载权限信息…</p>
       ) : !canPost ? (
         <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold leading-6 text-amber-900">
-          发表评论需先完成
+          发表评论需先完成测验（
           <Link className="mx-1 font-black text-[#4937db] underline" href="/test">
-            普通版测试
+            普通
           </Link>
-          并取得发帖资格。
+          /
+          <Link className="mx-1 font-black text-[#4937db] underline" href="/pro-test">
+            Pro
+          </Link>
+          ）并取得发帖资格。
         </p>
       ) : (
         <form className="mt-4 grid gap-3" onSubmit={handleSubmit}>

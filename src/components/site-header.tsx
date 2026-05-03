@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardList, Home, Menu, MessagesSquare, PenLine, X } from "lucide-react";
+import { ClipboardList, FlaskConical, Home, Menu, MessagesSquare, PenLine, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { siteConfig } from "@/data/site-config";
@@ -49,6 +49,10 @@ export function SiteHeader() {
             <ClipboardList size={15} />
             普通测试
           </Link>
+          <Link className={navLinkClass} href="/pro-test">
+            <FlaskConical size={15} />
+            Pro 测试
+          </Link>
           <Link className={navLinkClass} href="/board">
             <MessagesSquare size={15} />
             留言板
@@ -75,6 +79,10 @@ export function SiteHeader() {
             <Link className={navLinkClass} href="/test" onClick={() => setMenuOpen(false)}>
               <ClipboardList size={15} />
               普通测试
+            </Link>
+            <Link className={navLinkClass} href="/pro-test" onClick={() => setMenuOpen(false)}>
+              <FlaskConical size={15} />
+              Pro 测试
             </Link>
             <Link className={navLinkClass} href="/board" onClick={() => setMenuOpen(false)}>
               <MessagesSquare size={15} />

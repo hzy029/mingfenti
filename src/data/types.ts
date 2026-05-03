@@ -21,9 +21,35 @@ export type BasicQuestion = {
   options: BasicOption[];
 };
 
+/** 普通版：判断题（由 Pro 题库派生的陈述） */
+export type TfQuestionVariant = "oppose" | "support";
+
+/** 文档题库 `docs/详细设计/题库/lite`：按题干与明粉/理性倾向判分 */
+export type LiteQuestionScoring = {
+  mode: "extreme" | "rational";
+  lean: "支持" | "反对";
+};
+
+export type TfQuestion = {
+  id: string;
+  sourceQuestionId: string;
+  variant: TfQuestionVariant;
+  order: number;
+  category: string;
+  bank: "core" | "supplemental";
+  weight: 1 | 2;
+  /** 完整题干 */
+  statement: string;
+  /** 用户选「支持」（认同题干成立）为正确时 true，否则以「反对」为正确 */
+  correctTrue: boolean;
+  /** 存在时由 `scoreLiteAnswers` 按文档规则计分，忽略 `correctTrue` 与母题映射 */
+  liteScoring?: LiteQuestionScoring;
+};
+
 export type BasicResultId =
   | "objective-neutral"
   | "manchu-loyalist"
+  | "qing-fan"
   | "ming-leaning-moe"
   | "old-ming-fan"
   | "new-ming-fan"

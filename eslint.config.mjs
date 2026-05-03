@@ -3,4 +3,18 @@ import nextTypescript from "eslint-config-next/typescript";
 
 const eslintConfig = [...nextCoreWebVitals, ...nextTypescript];
 
-export default eslintConfig;
+const config = [
+  {
+    ignores: [
+      "**/.next/**",
+      "**/.open-next/**",
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/out/**",
+      "**/.wrangler/**"
+    ]
+  },
+  ...eslintConfig
+];
+
+export default config;

@@ -11,6 +11,8 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "export:lite-judgment-md": "tsx scripts/export-lite-judgment-md.ts",
+    "generate:lite-bank": "tsx scripts/generate-lite-bank-data.ts",
     "cf:build": "opennextjs-cloudflare build",
     "cf:deploy": "opennextjs-cloudflare deploy",
     "preview": "npm run cf:build && opennextjs-cloudflare preview",
@@ -41,6 +43,7 @@
     "eslint": "latest",
     "eslint-config-next": "latest",
     "tailwindcss": "latest",
+    "tsx": "^4.21.0",
     "typescript": "latest",
     "wrangler": "latest"
   }

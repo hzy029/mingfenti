@@ -8,8 +8,8 @@
 ## 1. 项目是什么（一页纸）
 
 - 部署目标：**Cloudflare Workers** 上跑 **Next.js**（OpenNext），**D1** 存匿名数据。
-- **普通版**：约 111 道题库，每次随机抽 **20** 题（核心 6 + 补充 14），双维度评分，结果页与首页统计。
-- **Pro 版**：入口保留为「建设中 / 不可点」，**未实现**题库与页面流程。
+- **普通版（目标产品）**：**20 道全判断题**，一维线性计分，与 Pro 共用 `resultId`；**实现状态**：见 `src/app/test` 等，以代码为准（若尚未接判断题，文档先行）。
+- **Pro 版（目标产品）**：**20 道四选一**，双轴（历史了解 × 明朝偏向），即当前主流题库与计分实现形态；**入口**：顶栏历史上有隐藏 Pro，以实际情况为准。
 - **留言板（知乎式）**：**仅管理员**在 `/admin/board` 发布**主题**（标题 + 可选主题说明）；**用户**只能在主题下发布**回答**（数据表仍为 `board_posts`，语义为回答）、在每条回答下发布**评论**（表 `board_comments`）。回答/评论均可点赞累计热度。首页展示置顶主题 + 最热回答摘要、热门主题轮播。**无登录**。
 - 原则：不做逐题答题明细上报；测试完成事件与留言为站点级数据。
 
@@ -94,14 +94,14 @@ npx wrangler versions upload
 ### 3.3 留言板 + 首页版块 + 顶栏
 
 - **D1 表**（见 [`schema.sql`](../../schema.sql)）：`board_topics`、`board_topic_meta`（主题补充说明）、`board_posts`（**回答**，`topic_id` 外键）、`board_comments`（**评论**，`answer_id` 指向回答）、`board_daily_actions`（每日发帖计数，供匿名限流）、`board_likes`（回答/评论点赞按 IP 哈希去重，与 `heat_score` 联动）、`basic_attempts` 等。
-- **公开页面**：`/board` 主题列表含每条主题下**一行最热已发布回答摘要**（无发主题入口）；`/board/[topicId]` 展示主题说明、回答列表、每条回答下的评论区与「写回答」表单。**浏览不校验**测评；**发表回答/评论**须请求体带普通版测评 **`resultId`**，且仅允许 `objective-neutral`、`ming-leaning-moe`、`manchu-loyalist`（见 [`src/lib/board-post-eligibility.ts`](../../src/lib/board-post-eligibility.ts)），否则 **403** `board-post-not-eligible`。同一访客（**UTC 日 + IP 经盐哈希**，见 `CF-Connecting-IP` / `X-Forwarded-For`）**回答 + 评论合计每日最多 20 次**（表 `board_daily_actions`，环境变量 `BOARD_RATE_SALT`、`BOARD_DAILY_POST_LIMIT`），超限 **429** `daily-limit-exceeded`；同 NAT 共享额度。**写入数据库成功即计一次**，与审核结果无关。
+- **公开页面**：`/board` 主题列表含每条主题下**一行最热已发布回答摘要**（无发主题入口）；`/board/[topicId]` 展示主题说明、回答列表、每条回答下的评论区与「写回答」表单。**浏览不校验**测评；**发表回答/评论**须请求体带测验 **`resultId`**（普通版判断或 Pro 双轴，白名单见 [`board-post-eligibility.ts`](../../src/lib/board-post-eligibility.ts)：`objective-neutral`、`ming-leaning-moe`、`manchu-loyalist`），否则 **403** `board-post-not-eligible`。同一访客（**UTC 日 + IP 经盐哈希**，见 `CF-Connecting-IP` / `X-Forwarded-For`）**回答 + 评论合计每日最多 20 次**（表 `board_daily_actions`，环境变量 `BOARD_RATE_SALT`、`BOARD_DAILY_POST_LIMIT`），超限 **429** `daily-limit-exceeded`；同 NAT 共享额度。**写入数据库成功即计一次**，与审核结果无关。
 - **公开 API**  
   - `GET` [`src/app/api/board/topics/route.ts`](../../src/app/api/board/topics/route.ts) 列表；`POST` 同路径返回 **403**（禁止用户建主题）。  
   - `POST` [`src/app/api/board/topics/[topicId]/posts/route.ts`](../../src/app/api/board/topics/[topicId]/posts/route.ts) 发布回答（鉴权 `resultId` + 日限额 + DeepSeek 审核流程）。  
   - `POST` [`src/app/api/board/posts/[postId]/comments/route.ts`](../../src/app/api/board/posts/[postId]/comments/route.ts) 发布评论（同上）。  
   - `POST` [`src/app/api/board/posts/[postId]/like/route.ts`](../../src/app/api/board/posts/[postId]/like/route.ts)、[`src/app/api/board/comments/[commentId]/like/route.ts`](../../src/app/api/board/comments/[commentId]/like/route.ts) 点赞（同一 IP 哈希对同一回答/评论仅计一次，见 `board_likes`）。
 - **首页**：[`src/components/home-message-board.tsx`](../../src/components/home-message-board.tsx) 等；数据 [`src/lib/board-home-data.ts`](../../src/lib/board-home-data.ts)。**首屏两板块**由 [`src/components/home-test-board-carousel.tsx`](../../src/components/home-test-board-carousel.tsx) 以单卡片轮播呈现（默认「留言板」、约 10 秒自动与手动切换「标准鉴定」与「留言板」）。
-- **顶栏**：[`src/components/site-header.tsx`](../../src/components/site-header.tsx) 为 **首页 → 普通测试 → 留言板 → 我的B站**；**`lg` 以下**为汉堡菜单展开四项；**不展示** Pro 版入口。
+- **顶栏**：[`src/components/site-header.tsx`](../../src/components/site-header.tsx) 为 **首页 → 普通测试 → 留言板 → 我的B站**（文案「普通测试」可能对应迁移后的判断入口或暂挂双轴路由，以代码为准）；**`lg` 以下**为汉堡菜单展开四项。
 
 ### 3.4 管理端（留言板）
 
@@ -131,7 +131,8 @@ npx wrangler versions upload
 
 ### 3.6 明确未实现（避免误解）
 
-- **Pro 版**：题库与完整流程仍**未实现**（与留言板 DeepSeek 审核无关）。
+- **普通版（判断题）**：独立题库与页面若尚未接入，以仓库路由与数据为准；评测标准见 [`docs/详细设计/basic-evaluation-standard.md`](../详细设计/basic-evaluation-standard.md) §1。
+- **原「四维 Pro」**：产品层面已废止（见 [`docs/详细设计/pro-evaluation-standard.md`](../详细设计/pro-evaluation-standard.md) 附录）；与留言板 DeepSeek 审核无关。
 
 ---
 
@@ -164,7 +165,7 @@ npx wrangler versions upload
 | [`src/app/result/page.tsx`](../../src/app/result/page.tsx) | 结果展示 |
 | [`src/app/board/page.tsx`](../../src/app/board/page.tsx) | 留言板主题列表（用户不能在此发主题） |
 | [`src/app/board/[topicId]/page.tsx`](../../src/app/board/[topicId]/page.tsx) | 主题详情、回答、评论区、写回答 |
-| [`src/lib/basic-scoring.ts`](../../src/lib/basic-scoring.ts) | 普通版计分与结果区间 |
+| [`src/lib/basic-scoring.ts`](../../src/lib/basic-scoring.ts) | **Pro（双轴）**计分与结果区间；普通版（判断）落地后或新增独立一维映射模块 |
 | [`src/lib/basic-stats.ts`](../../src/lib/basic-stats.ts) | 首页五类分布聚合 |
 | [`src/lib/board-home-data.ts`](../../src/lib/board-home-data.ts) | 首页留言板置顶与热门数据 |
 | [`src/lib/cloudflare-db.ts`](../../src/lib/cloudflare-db.ts) | D1 获取封装 |
@@ -175,7 +176,7 @@ npx wrangler versions upload
 | [`src/app/admin/board/topics/page.tsx`](../../src/app/admin/board/topics/page.tsx) | 管理主题与回答（三栏：列表 / 主题控制 / 回答区，置顶权值） |
 | [`schema.sql`](../../schema.sql) | 全库表结构（测试记录 + 留言板） |
 
-题库与抽题配置：`src/data/basic-*`、`src/lib/basic-question-selection.ts`；文档版题库索引见 `docs/详细设计/题库.md` 与 `docs/详细设计/题库/` 目录。
+题库与抽题配置：`src/data/basic-*`、`src/lib/basic-question-selection.ts`；文档版题库索引见 `docs/详细设计/题库.md`（`docs/详细设计/题库/pro/` 为 Pro 四选一正文，`docs/详细设计/题库/lite/` 为普通判断短表）。
 
 ---
 

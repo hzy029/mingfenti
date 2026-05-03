@@ -1,11 +1,12 @@
-# XX 检测器
+# 明粉检测器
 
 面向中文明清史爱好者的趣味测试网站。项目使用 Next.js、React、TypeScript 和 Tailwind CSS，目标部署到 Cloudflare。
 
 ## 当前状态
 
-- 普通版 MVP 已完成：首页、普通测试页、结果页和公告弹窗已可用
-- 普通版题库当前为 111 题，每次随机抽 20 题：核心题 6 道，补充题 14 道
+- **产品文档（真值）**：**普通版** = 20 道**判断题**、一维计分；**Pro 版** = 20 道**四选一**、双轴计分；两套共用同一套 `resultId`（见 `docs/详细设计/basic-evaluation-standard.md`）。原「四维 Pro」已废止（见 `docs/详细设计/pro-evaluation-standard.md` 附录）。
+- **工程落地进度**：MVP 当前实现为双轴四选一（与文档中的 Pro 一致）；判断题普通版流程待开发。
+- Pro（双轴）题库当前约 111 题文档体量，每次随机抽 20 题：核心题 6 道，补充题 14 道
 - 项目已接入 Cloudflare Workers + OpenNext + D1
 - D1 表 `basic_attempts` 已创建，用于记录匿名完成测试事件和首页结果分布；留言板表 `board_topics` / `board_posts` 见 `schema.sql`，需对远程库执行迁移后启用
 - `mingfen.sbs` 已绑定到 Worker 自定义域；历史 Pages/DNS 源站 522 问题已处理
@@ -44,7 +45,7 @@ npm run cf:build
 
 控制台一键部署命令示例：`npm ci && npm run deploy`。
 
-上传版本也可在项目目录安装依赖后使用 Wrangler，详见 [`docs/实现/handoff-工程当前.md`](docs/实现/handoff-工程当前.md) 与 Cloudflare 文档。
+上传版本也可在项目目录安装依赖后使用 Wrangler，详见 `[docs/实现/handoff-工程当前.md](docs/实现/handoff-工程当前.md)` 与 Cloudflare 文档。
 
 当前 D1 绑定在 `wrangler.toml` 中为：
 
@@ -63,7 +64,7 @@ database_name = "mingqing-detector"
 
 新窗口继续任务时，先读：
 
-- [**工程与运维交接（当前）**](docs/实现/handoff-工程当前.md)（已实现能力、站主待办、代码入口）
+- **[工程与运维交接（当前）](docs/实现/handoff-工程当前.md)**（已实现能力、站主待办、代码入口）
 - [项目交接文档（历史与题库过程，可选）](docs/实现/handoff.md)
 - [普通版评测标准](docs/详细设计/basic-evaluation-standard.md)
 - [Pro 版评测标准](docs/详细设计/pro-evaluation-standard.md)
@@ -74,7 +75,7 @@ database_name = "mingqing-detector"
 
 辅助文档：
 
-- 流程测试用题（v0.1）：[`src/data/basic-questions.ts`](src/data/basic-questions.ts)（导出的 `question-bank-v0.1.md` 未入库）
+- 流程测试用题（v0.1）：`[src/data/basic-questions.ts](src/data/basic-questions.ts)`（导出的 `question-bank-v0.1.md` 未入库）
 - [公告文案草案](docs/实现/announcement-draft.md)
 - [资料总目录](docs/references/bibliography.md)
 
@@ -116,7 +117,7 @@ docs/
 - 补充 `docs/references/samples/已经切割的旧明粉/`、`旧明粉/`、`新明粉/` 等样本
 - 补充 `docs/references/samples/教条主义/` 中的教材/科班式话术样本
 - 补充 `docs/references/samples/西方中心主义者/` 中的西方中心主义典型言论
-- 优先完善普通版评测标准；Pro 四维暂不修规则，只登记后续素材
+- 完善 `[basic-evaluation-standard.md](docs/详细设计/basic-evaluation-standard.md)`（普通判断 + Pro 双轴）；判断题题库落地后可再迭代阈值标定
 - 再从标准和样本反推正式题库
 
 工程侧：
@@ -124,4 +125,5 @@ docs/
 - 若尚未执行：对远程 D1 跑 `npm run d1:apply:remote`，包含留言板表；配置 `ADMIN_BOARD_SECRET` 后使用 `/admin/board` 管理留言
 - 线上完成一次超过 30 秒的测试，确认 `basic_attempts` 从 0 增加到 1
 - 确认首页“累计测试次数”和“五类结果分布”能从 D1 更新
-- 后续：P1 DeepSeek 发帖审核（未实现）；Pro 版流程
+- 后续：P1 DeepSeek 发帖审核（未实现）；普通版（全判断题）若尚未接入，补页面与题库数据
+
