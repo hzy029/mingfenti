@@ -3,7 +3,9 @@ import {
   adminBoardUnauthorizedResponse,
   isAdminBoardAuthorized
 } from "@/lib/board-admin-auth";
+import { BOARD_REVIEW_STATUSES, ensureBoardReviewSchema, type BoardReviewStatus } from "@/lib/board-review";
 import { clampBoardBody } from "@/lib/board-text";
+import { deleteBoardLikesForPostAndItsComments, ensureBoardLikesSchema } from "@/lib/board-likes";
 import { getD1Database } from "@/lib/cloudflare-db";
 
 type RouteParams = {
@@ -13,7 +15,12 @@ type RouteParams = {
 type PatchBody = {
   hidden?: boolean;
   body?: string;
+  reviewStatus?: BoardReviewStatus;
 };
+
+function isReviewStatus(value: unknown): value is BoardReviewStatus {
+  return typeof value === "string" && BOARD_REVIEW_STATUSES.includes(value as BoardReviewStatus);
+}
 
 export async function PATCH(request: Request, context: RouteParams) {
   if (!process.env.ADMIN_BOARD_SECRET) {
@@ -41,9 +48,14 @@ export async function PATCH(request: Request, context: RouteParams) {
 
   const hasHidden = typeof payload.hidden === "boolean";
   const hasBody = typeof payload.body === "string";
+  const hasReviewStatus = payload.reviewStatus !== undefined;
 
-  if (!hasHidden && !hasBody) {
+  if (!hasHidden && !hasBody && !hasReviewStatus) {
     return Response.json({ ok: false, reason: "invalid-payload" }, { status: 400 });
+  }
+
+  if (hasReviewStatus && !isReviewStatus(payload.reviewStatus)) {
+    return Response.json({ ok: false, reason: "invalid-review-status" }, { status: 400 });
   }
 
   let nextBody: string | undefined;
@@ -68,13 +80,40 @@ export async function PATCH(request: Request, context: RouteParams) {
   }
 
   try {
-    if (nextBody !== undefined && nextHidden !== undefined) {
-      await db.prepare(`UPDATE board_posts SET body = ?, hidden = ? WHERE id = ?`).bind(nextBody, nextHidden, postId).run();
-    } else if (nextBody !== undefined) {
-      await db.prepare(`UPDATE board_posts SET body = ? WHERE id = ?`).bind(nextBody, postId).run();
-    } else if (nextHidden !== undefined) {
-      await db.prepare(`UPDATE board_posts SET hidden = ? WHERE id = ?`).bind(nextHidden, postId).run();
+    await ensureBoardReviewSchema(db);
+
+    const updates: string[] = [];
+    const values: unknown[] = [];
+    const now = new Date().toISOString();
+
+    if (nextBody !== undefined) {
+      updates.push("body = ?");
+      values.push(nextBody);
     }
+
+    if (nextHidden !== undefined) {
+      updates.push("hidden = ?");
+      values.push(nextHidden);
+    }
+
+    if (hasReviewStatus) {
+      updates.push("review_status = ?", "reviewed_at = ?", "review_provider = ?", "review_verdict = ?", "review_reason = ?");
+      values.push(
+        payload.reviewStatus,
+        now,
+        "admin",
+        payload.reviewStatus === "published" ? "approve" : payload.reviewStatus === "rejected" ? "reject" : "review",
+        "admin-override"
+      );
+
+      if (payload.reviewStatus === "published") {
+        updates.push("published_at = COALESCE(published_at, ?)");
+        values.push(now);
+      }
+    }
+
+    values.push(postId);
+    await db.prepare(`UPDATE board_posts SET ${updates.join(", ")} WHERE id = ?`).bind(...values).run();
 
     return Response.json({ ok: true });
   } catch {
@@ -111,6 +150,9 @@ export async function DELETE(request: Request, context: RouteParams) {
     if (!row) {
       return Response.json({ ok: false, reason: "not-found" }, { status: 404 });
     }
+
+    await ensureBoardLikesSchema(db);
+    await deleteBoardLikesForPostAndItsComments(db, postId);
 
     await db.prepare(`DELETE FROM board_comments WHERE answer_id = ?`).bind(postId).run();
     await db.prepare(`DELETE FROM board_posts WHERE id = ?`).bind(postId).run();

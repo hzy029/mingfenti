@@ -8,6 +8,8 @@ import type { BoardHomeSlide } from "@/lib/board-home-data";
 type HomeMessageBoardProps = {
   pin: BoardHomeSlide | null;
   hotTen: BoardHomeSlide[];
+  /** 放入首页轮播时去掉外框，由外层卡片统一包边 */
+  embedded?: boolean;
 };
 
 function SlideCard({ label, slide }: { label: string; slide: BoardHomeSlide }) {
@@ -28,7 +30,7 @@ function SlideCard({ label, slide }: { label: string; slide: BoardHomeSlide }) {
   );
 }
 
-export function HomeMessageBoard({ pin, hotTen }: HomeMessageBoardProps) {
+export function HomeMessageBoard({ pin, hotTen, embedded = false }: HomeMessageBoardProps) {
   const [index, setIndex] = useState(0);
   const touchStartX = useRef<number | null>(null);
 
@@ -45,9 +47,13 @@ export function HomeMessageBoard({ pin, hotTen }: HomeMessageBoardProps) {
 
   const empty = !pin && total === 0;
 
+  const shellClass = embedded
+    ? "border-0 bg-transparent p-0 shadow-none"
+    : "rounded-2xl border border-slate-200 bg-white p-8 shadow-sm";
+
   if (empty) {
     return (
-      <article className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+      <article className={shellClass}>
         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#e3e7ff] text-[#141537]">
           <MessagesSquare size={30} />
         </div>
@@ -62,7 +68,14 @@ export function HomeMessageBoard({ pin, hotTen }: HomeMessageBoardProps) {
   }
 
   return (
-    <article className="overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-8 shadow-sm">
+    <article
+      className={[
+        "overflow-hidden",
+        embedded
+          ? "border-0 bg-gradient-to-br from-transparent to-transparent p-0 shadow-none"
+          : "rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-8 shadow-sm"
+      ].join(" ")}
+    >
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#e3e7ff] text-[#141537]">

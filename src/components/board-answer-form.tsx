@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { BoardMarkdownEditor } from "@/components/board-markdown-editor";
+import { readBasicTestResultId, useBoardPostPermission } from "@/hooks/use-board-post-permission";
 
 type BoardAnswerFormProps = {
   topicId: number;
@@ -10,38 +12,80 @@ type BoardAnswerFormProps = {
 
 export function BoardAnswerForm({ topicId }: BoardAnswerFormProps) {
   const router = useRouter();
+  const { ready, canPost } = useBoardPostPermission();
   const [body, setBody] = useState("");
   const [authorDisplay, setAuthorDisplay] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
+    setMessage(null);
     setPending(true);
+
+    const resultId = readBasicTestResultId();
 
     try {
       const response = await fetch(`/api/board/topics/${topicId}/posts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body, authorDisplay })
+        body: JSON.stringify({ body, authorDisplay, resultId })
       });
-      const payload = (await response.json()) as { ok?: boolean; reason?: string };
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        reason?: string;
+        message?: string;
+        reviewStatus?: string;
+      };
 
       if (!response.ok || !payload.ok) {
-        setError(payload.reason === "body-required" ? "请填写回答内容" : "发布失败，请稍后再试。");
+        if (payload.reason === "board-post-not-eligible") {
+          setError(payload.message ?? "发布回答需先完成普通版测试并取得发帖资格。");
+        } else if (payload.reason === "daily-limit-exceeded") {
+          setError(payload.message ?? "今日发帖次数已达上限。");
+        } else if (payload.reason === "body-required") {
+          setError("请填写回答内容");
+        } else {
+          setError("发布失败，请稍后再试。");
+        }
         setPending(false);
         return;
       }
 
       setBody("");
       setAuthorDisplay("");
+      setMessage(payload.reviewStatus === "published" ? "发布成功，回答已显示。" : "提交成功，内容已进入审核，通过后将会显示在本主题下。");
       router.refresh();
     } catch {
       setError("网络错误，请稍后再试。");
     } finally {
       setPending(false);
     }
+  }
+
+  if (!ready) {
+    return (
+      <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-6">
+        <p className="text-sm font-bold text-slate-500">加载权限信息…</p>
+      </div>
+    );
+  }
+
+  if (!canPost) {
+    return (
+      <section className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-6">
+        <h2 className="text-lg font-black text-amber-950">写回答</h2>
+        <p className="mt-3 text-sm font-bold leading-7 text-amber-900">
+          浏览主题与回答不受限；发布回答需先完成
+          <Link className="mx-1 font-black text-[#4937db] underline" href="/test">
+            普通版测试
+          </Link>
+          并取得发帖资格（以当前浏览器会话为准）。
+        </p>
+      </section>
+    );
   }
 
   return (
@@ -69,6 +113,7 @@ export function BoardAnswerForm({ topicId }: BoardAnswerFormProps) {
         />
       </label>
       {error ? <p className="text-sm font-bold text-red-600">{error}</p> : null}
+      {message ? <p className="text-sm font-bold text-emerald-700">{message}</p> : null}
       <button
         className="inline-flex justify-center rounded-xl bg-[#4937db] px-5 py-3 text-lg font-black text-white transition hover:bg-[#3b2fc4] disabled:cursor-not-allowed disabled:opacity-60"
         disabled={pending}

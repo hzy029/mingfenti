@@ -2,7 +2,7 @@ import { ArrowRight, BarChart3, FlaskConical } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { HomeAnnouncementModal } from "@/components/home-announcement-modal";
-import { HomeMessageBoard } from "@/components/home-message-board";
+import { HomeTestBoardCarousel } from "@/components/home-test-board-carousel";
 import { SiteHeader } from "@/components/site-header";
 import { siteConfig } from "@/data/site-config";
 import { getBoardHomeSlides } from "@/lib/board-home-data";
@@ -93,27 +93,8 @@ export default async function HomePage() {
         </section>
       </div>
 
-      <section className="mx-auto grid max-w-6xl gap-8 px-5 py-16 md:grid-cols-2">
-        <article className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#e3e7ff] text-[#141537]">
-            <FlaskConical size={30} />
-          </div>
-          <h2 className="mt-6 text-3xl font-black">标准鉴定</h2>
-          <p className="mt-4 max-w-xl text-lg leading-8 text-slate-600">
-            20 道题，测试你对明清历史的基本认知偏差。约 3 分钟完成，即时出结果。
-          </p>
-          <div className="mt-7 flex flex-wrap gap-3 text-sm font-bold text-slate-500">
-            <span className="rounded-full bg-slate-100 px-3 py-1">20 题</span>
-            <span className="rounded-full bg-slate-100 px-3 py-1">约 3 分钟</span>
-            <span className="rounded-full bg-slate-100 px-3 py-1">5 种结果</span>
-          </div>
-          <Link className="mt-7 inline-flex items-center gap-2 text-lg font-black text-[#4937db]" href="/test">
-            立即开始
-            <ArrowRight size={18} />
-          </Link>
-        </article>
-
-        <HomeMessageBoard hotTen={boardSlides.hotTen} pin={boardSlides.pin} />
+      <section className="mx-auto max-w-6xl px-5 py-16">
+        <HomeTestBoardCarousel hotTen={boardSlides.hotTen} pin={boardSlides.pin} />
       </section>
 
       <section className="mx-auto max-w-6xl px-5 pb-10">

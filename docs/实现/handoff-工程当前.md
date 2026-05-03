@@ -1,6 +1,6 @@
 # 工程与运维交接（当前）
 
-**日期**：2026-05-03（留言板知乎式改版与排错说明见 §3.3、§4.1）  
+**日期**：2026-05-03（留言板与管理端、顶栏等迭代说明见 §3.3–§3.5、§2）  
 **用途**：新会话、新同事、新窗口继续开发时**优先阅读本文**；产品与题库长历史见文末「延伸阅读」中的旧交接文档。
 
 ---
@@ -59,7 +59,17 @@ C:\nvm4w\nodejs\npm.cmd run d1:apply:remote
 C:\nvm4w\nodejs\npm.cmd run d1:count:remote
 ```
 
-**Cloudflare 发布（与 README 一致）**
+**Cloudflare 发布**
+
+仓库脚本（与 [`package.json`](../../package.json) 一致）：
+
+```powershell
+C:\nvm4w\nodejs\npm.cmd run deploy
+```
+
+等价于 `opennextjs-cloudflare build && opennextjs-cloudflare deploy`。亦可手动：`opennextjs-cloudflare build` 后按 Wrangler 文档上传。**部署后**若自定义域与 Workers 子域表现不一致，可对域名清理缓存或核对控制台 Worker 版本。
+
+以下为历史备用写法（若团队仍用手动两步）：
 
 ```bash
 npx opennextjs-cloudflare build
@@ -83,19 +93,24 @@ npx wrangler versions upload
 
 ### 3.3 留言板 + 首页版块 + 顶栏
 
-- **D1 表**（见 [`schema.sql`](../../schema.sql)）：`board_topics`、`board_topic_meta`（主题补充说明）、`board_posts`（**回答**，`topic_id` 外键）、`board_comments`（**评论**，`answer_id` 指向回答）、`basic_attempts` 等。
-- **公开页面**：`/board` 仅主题列表（无发主题入口）；`/board/[topicId]` 展示主题说明、回答列表、每条回答下的评论区与「写回答」表单。
+- **D1 表**（见 [`schema.sql`](../../schema.sql)）：`board_topics`、`board_topic_meta`（主题补充说明）、`board_posts`（**回答**，`topic_id` 外键）、`board_comments`（**评论**，`answer_id` 指向回答）、`board_daily_actions`（每日发帖计数，供匿名限流）、`board_likes`（回答/评论点赞按 IP 哈希去重，与 `heat_score` 联动）、`basic_attempts` 等。
+- **公开页面**：`/board` 主题列表含每条主题下**一行最热已发布回答摘要**（无发主题入口）；`/board/[topicId]` 展示主题说明、回答列表、每条回答下的评论区与「写回答」表单。**浏览不校验**测评；**发表回答/评论**须请求体带普通版测评 **`resultId`**，且仅允许 `objective-neutral`、`ming-leaning-moe`、`manchu-loyalist`（见 [`src/lib/board-post-eligibility.ts`](../../src/lib/board-post-eligibility.ts)），否则 **403** `board-post-not-eligible`。同一访客（**UTC 日 + IP 经盐哈希**，见 `CF-Connecting-IP` / `X-Forwarded-For`）**回答 + 评论合计每日最多 20 次**（表 `board_daily_actions`，环境变量 `BOARD_RATE_SALT`、`BOARD_DAILY_POST_LIMIT`），超限 **429** `daily-limit-exceeded`；同 NAT 共享额度。**写入数据库成功即计一次**，与审核结果无关。
 - **公开 API**  
   - `GET` [`src/app/api/board/topics/route.ts`](../../src/app/api/board/topics/route.ts) 列表；`POST` 同路径返回 **403**（禁止用户建主题）。  
-  - `POST` [`src/app/api/board/topics/[topicId]/posts/route.ts`](../../src/app/api/board/topics/[topicId]/posts/route.ts) 发布回答。  
-  - `POST` [`src/app/api/board/posts/[postId]/comments/route.ts`](../../src/app/api/board/posts/[postId]/comments/route.ts) 发布评论。  
-  - `POST` [`src/app/api/board/posts/[postId]/like/route.ts`](../../src/app/api/board/posts/[postId]/like/route.ts)、[`src/app/api/board/comments/[commentId]/like/route.ts`](../../src/app/api/board/comments/[commentId]/like/route.ts) 点赞。
-- **首页**：[`src/components/home-message-board.tsx`](../../src/components/home-message-board.tsx)；数据 [`src/lib/board-home-data.ts`](../../src/lib/board-home-data.ts)。
-- **顶栏**：[`src/components/site-header.tsx`](../../src/components/site-header.tsx) 为 **首页 → 普通测试 → 留言板 → PRO（不可点）→ 我的B站**。
+  - `POST` [`src/app/api/board/topics/[topicId]/posts/route.ts`](../../src/app/api/board/topics/[topicId]/posts/route.ts) 发布回答（鉴权 `resultId` + 日限额 + DeepSeek 审核流程）。  
+  - `POST` [`src/app/api/board/posts/[postId]/comments/route.ts`](../../src/app/api/board/posts/[postId]/comments/route.ts) 发布评论（同上）。  
+  - `POST` [`src/app/api/board/posts/[postId]/like/route.ts`](../../src/app/api/board/posts/[postId]/like/route.ts)、[`src/app/api/board/comments/[commentId]/like/route.ts`](../../src/app/api/board/comments/[commentId]/like/route.ts) 点赞（同一 IP 哈希对同一回答/评论仅计一次，见 `board_likes`）。
+- **首页**：[`src/components/home-message-board.tsx`](../../src/components/home-message-board.tsx) 等；数据 [`src/lib/board-home-data.ts`](../../src/lib/board-home-data.ts)。**首屏两板块**由 [`src/components/home-test-board-carousel.tsx`](../../src/components/home-test-board-carousel.tsx) 以单卡片轮播呈现（默认「留言板」、约 10 秒自动与手动切换「标准鉴定」与「留言板」）。
+- **顶栏**：[`src/components/site-header.tsx`](../../src/components/site-header.tsx) 为 **首页 → 普通测试 → 留言板 → 我的B站**；**`lg` 以下**为汉堡菜单展开四项；**不展示** Pro 版入口。
 
 ### 3.4 管理端（留言板）
 
-- **页面**：`/admin/board` → [`src/app/admin/board/page.tsx`](../../src/app/admin/board/page.tsx)。
+- **页面**：`/admin/board` → [`src/app/admin/board/page.tsx`](../../src/app/admin/board/page.tsx)；**管理主题与回答** → [`src/app/admin/board/topics/page.tsx`](../../src/app/admin/board/topics/page.tsx)。
+- **壳布局**：[`src/components/admin-board-shell.tsx`](../../src/components/admin-board-shell.tsx) 左侧固定导航（登录 / 发主题 / 管理主题与回答），右侧为各子页内容。
+- **`/admin/board/topics`（主题 + 回答）**  
+  - **三栏**：主内容区为 **flex 横向**（`flex-nowrap`）：左 **11rem** 主题列表、中 **15rem** 主题控制、右 `flex-1 min-w-0` 回答区；容器 `overflow-x-auto` 极窄时横向滚动。曾用 `grid-cols-[...minmax(0,1fr)]` 会受 Tailwind 任意类名截断影响，已弃用。  
+  - **置顶权值**：支持 **手填整数 +「保存权值」**，以及快捷 **「置顶主题」**（代码内固定大权值，与公开列表排序一致）、**「取消置顶」**（权值 0）。更新成功后输入框与列表会通过 [`AdminBoardProvider`](../../src/components/admin-board-provider.tsx) 同步。  
+  - **回答列表**：可点「回答 #…」信息条切换「当前回答」；正文默认限高预览，**右下角固定按钮**展开/收起当前回答全文（编辑时用 Markdown 全屏编辑器）。
 - **如何进入**：浏览器直接打开路径 **`/admin/board`**（例如线上 `https://你的域名/admin/board`，本地 `http://localhost:3000/admin/board`）。**顶栏不设入口**，避免把管理地址挂在显眼位置；可与 [`/board` 页脚「站务管理」](../../src/app/board/page.tsx) 一样自行收藏。打开后在页面里填写与 Worker 环境变量 **`ADMIN_BOARD_SECRET`** 完全一致的密钥，点「保存密钥并加载」；也可先点「从 sessionStorage 导入」若本机曾保存过。**生成与部署密钥的逐步说明**：[ADMIN_BOARD_SECRET-配置说明.md](./ADMIN_BOARD_SECRET-配置说明.md)。
 - **鉴权**：请求头 `x-admin-board-secret` 必须与环境变量 **`ADMIN_BOARD_SECRET`** 一致（[`src/lib/board-admin-auth.ts`](../../src/lib/board-admin-auth.ts)）。  
   - **未配置** `ADMIN_BOARD_SECRET`：管理 API 返回 **503**，JSON `reason: "admin-not-configured"`，管理页与发布主题表单会提示「服务端未设置…」。  
@@ -103,14 +118,20 @@ npx wrangler versions upload
 - **API**（均需请求头；另含 `POST` 创建主题、评论管理）  
   - `GET` / `POST` [`src/app/api/admin/board/topics/route.ts`](../../src/app/api/admin/board/topics/route.ts)（`POST` = 管理员发主题）  
   - `PATCH` [`src/app/api/admin/board/topics/[topicId]/route.ts`](../../src/app/api/admin/board/topics/[topicId]/route.ts)  
-  - `GET` [`src/app/api/admin/board/topics/[topicId]/posts/route.ts`](../../src/app/api/admin/board/topics/[topicId]/posts/route.ts)  
+  - `GET` / `POST` [`src/app/api/admin/board/topics/[topicId]/posts/route.ts`](../../src/app/api/admin/board/topics/[topicId]/posts/route.ts)（`POST` = 管理员代发回答，**跳过** DeepSeek，直接 `published`）  
   - `PATCH` [`src/app/api/admin/board/posts/[postId]/route.ts`](../../src/app/api/admin/board/posts/[postId]/route.ts)  
   - `GET` [`src/app/api/admin/board/posts/[postId]/comments/route.ts`](../../src/app/api/admin/board/posts/[postId]/comments/route.ts)  
   - `PATCH` [`src/app/api/admin/board/comments/[commentId]/route.ts`](../../src/app/api/admin/board/comments/[commentId]/route.ts)
 
-### 3.5 明确未实现（避免误解）
+### 3.5 DeepSeek 留言审核模块（协作必读）
 
-- **P1**：通过 **DeepSeek API / 云端 Agent** 做发帖/回复**自动审核**，通过后展示。当前**未开发**；发帖为即时公开，仅依赖人工在管理端隐藏与置顶权值。
+- **代码入口**：[`src/lib/board-review.ts`](../../src/lib/board-review.ts)。环境变量 **`DEEPSEEK_API_KEY`**（必填方可调用云端）、**`DEEPSEEK_MODEL`**（可选，默认 `deepseek-v4-flash`）。配套表结构由 **`ensureBoardReviewSchema`** 与 [`schema.sql`](../../schema.sql) 同步维护。
+- **调用链**：用户 **`POST`** 发布回答或评论 → `reviewBoardContent` → 按模型返回的 `verdict` 写入 `board_posts` / `board_comments` 的 `review_status`、`review_provider`（`deepseek` / `fallback`）、`review_reason` 等字段；超时或异常走 **fallback**，多为 **pending** 待人工处理。**管理员代发**（`POST` [`src/app/api/admin/board/topics/[topicId]/posts/route.ts`](../../src/app/api/admin/board/topics/[topicId]/posts/route.ts)）**不调用** `reviewBoardContent`，避免费用与不确定性。
+- **协作约定**：改动审核提示词、超时时间、`REVIEW_TIMEOUT_MS`、降级策略前，请 **先 `grep`/搜索仓库引用**；与 Codex 或其他 agent **并行开发时避免同时大改** 同一审核文件；**Schema 变更** 必须同步更新仓库 `schema.sql` 与远程 D1 迁移说明。
+
+### 3.6 明确未实现（避免误解）
+
+- **Pro 版**：题库与完整流程仍**未实现**（与留言板 DeepSeek 审核无关）。
 
 ---
 
@@ -127,7 +148,7 @@ npx wrangler versions upload
 
 ### 4.2 其余验收
 
-1. **D1**：执行 `npm run d1:apply:remote`，保证表与索引与仓库 `schema.sql` 一致。  
+1. **D1**：执行 `npm run d1:apply:remote`，保证表与索引与仓库 `schema.sql` 一致（含 `board_daily_actions`、`board_likes` 等留言板表）。  
 2. **密钥**：`ADMIN_BOARD_SECRET` 与 [ADMIN_BOARD_SECRET-配置说明.md](./ADMIN_BOARD_SECRET-配置说明.md)。  
 3. **线上**：管理员发主题 → 用户在主题下写回答与评论 → 首页热门与点赞是否正常。  
 4. **统计**：完成 ≥30 秒普通测试，确认 `basic_attempts` 与首页分布更新。
@@ -147,6 +168,11 @@ npx wrangler versions upload
 | [`src/lib/basic-stats.ts`](../../src/lib/basic-stats.ts) | 首页五类分布聚合 |
 | [`src/lib/board-home-data.ts`](../../src/lib/board-home-data.ts) | 首页留言板置顶与热门数据 |
 | [`src/lib/cloudflare-db.ts`](../../src/lib/cloudflare-db.ts) | D1 获取封装 |
+| [`src/lib/board-review.ts`](../../src/lib/board-review.ts) | DeepSeek 留言审核与降级 |
+| [`src/lib/board-post-eligibility.ts`](../../src/lib/board-post-eligibility.ts) | 发帖允许的 `resultId` 白名单 |
+| [`src/lib/board-rate-limit.ts`](../../src/lib/board-rate-limit.ts) | 留言每日次数（IP 哈希 + UTC 日） |
+| [`src/lib/board-likes.ts`](../../src/lib/board-likes.ts) | 点赞 IP 去重（`board_likes`） |
+| [`src/app/admin/board/topics/page.tsx`](../../src/app/admin/board/topics/page.tsx) | 管理主题与回答（三栏：列表 / 主题控制 / 回答区，置顶权值） |
 | [`schema.sql`](../../schema.sql) | 全库表结构（测试记录 + 留言板） |
 
 题库与抽题配置：`src/data/basic-*`、`src/lib/basic-question-selection.ts`；文档版题库索引见 `docs/详细设计/题库.md` 与 `docs/详细设计/题库/` 目录。

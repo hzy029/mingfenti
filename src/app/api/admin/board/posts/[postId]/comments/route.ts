@@ -3,6 +3,7 @@ import {
   adminBoardUnauthorizedResponse,
   isAdminBoardAuthorized
 } from "@/lib/board-admin-auth";
+import { ensureBoardReviewSchema } from "@/lib/board-review";
 import { getD1Database } from "@/lib/cloudflare-db";
 
 type RouteParams = {
@@ -15,6 +16,13 @@ type AdminCommentRow = {
   body: string;
   heat_score: number;
   hidden: number;
+  review_status: string;
+  published_at: string | null;
+  reviewed_at: string | null;
+  review_provider: string | null;
+  review_model: string | null;
+  review_verdict: string | null;
+  review_reason: string | null;
   created_at: string;
 };
 
@@ -41,9 +49,23 @@ export async function GET(request: Request, context: RouteParams) {
   }
 
   try {
+    await ensureBoardReviewSchema(db);
     const { results } = await db
       .prepare(
-        `SELECT id, author_display, body, heat_score, hidden, created_at
+        `SELECT
+          id,
+          author_display,
+          body,
+          heat_score,
+          hidden,
+          review_status,
+          published_at,
+          reviewed_at,
+          review_provider,
+          review_model,
+          review_verdict,
+          review_reason,
+          created_at
         FROM board_comments
         WHERE answer_id = ?
         ORDER BY id DESC

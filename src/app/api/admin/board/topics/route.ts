@@ -4,6 +4,7 @@ import {
   isAdminBoardAuthorized
 } from "@/lib/board-admin-auth";
 import { clampBoardBody, clampBoardTitle } from "@/lib/board-text";
+import { ensureBoardReviewSchema } from "@/lib/board-review";
 import { getD1Database } from "@/lib/cloudflare-db";
 
 type AdminTopicRow = {
@@ -32,6 +33,7 @@ export async function GET(request: Request) {
   }
 
   try {
+    await ensureBoardReviewSchema(db);
     const { results } = await db
       .prepare(
         `SELECT
@@ -43,7 +45,7 @@ export async function GET(request: Request) {
           COUNT(p.id) AS reply_count,
           COALESCE(MAX(p.heat_score), 0) AS max_post_heat
         FROM board_topics t
-        LEFT JOIN board_posts p ON p.topic_id = t.id
+        LEFT JOIN board_posts p ON p.topic_id = t.id AND p.review_status = 'published'
         GROUP BY t.id
         ORDER BY t.id DESC
         LIMIT 200`

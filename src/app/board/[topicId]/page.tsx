@@ -1,10 +1,14 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { BoardAnswerForm } from "@/components/board-answer-form";
 import { BoardMarkdownBody } from "@/components/board-markdown-body";
 import { BoardCommentThread, type BoardCommentPublicRow } from "@/components/board-comment-thread";
 import { BoardPostLikeButton } from "@/components/board-post-like-button";
 import { SiteHeader } from "@/components/site-header";
+import { ensureBoardReviewSchema } from "@/lib/board-review";
+import { ensureBoardLikesSchema, getLikedTargetIdsForIp } from "@/lib/board-likes";
+import { getClientIpFromHeaderGetter, hashIpForRateLimit } from "@/lib/board-rate-limit";
 import { getD1Database } from "@/lib/cloudflare-db";
 
 export const dynamic = "force-dynamic";
@@ -83,8 +87,11 @@ export default async function BoardTopicPage({ params }: BoardTopicPageProps) {
   let topicDescription = "";
   let posts: PostRow[] = [];
   let commentsByAnswer = new Map<number, BoardCommentPublicRow[]>();
+  let likedPostIdSet = new Set<number>();
+  let likedCommentIdSet = new Set<number>();
 
   try {
+    await ensureBoardReviewSchema(db);
     const topicResult = await db
       .prepare(`SELECT id, title, pin_weight, created_at FROM board_topics WHERE id = ? AND hidden = 0`)
       .bind(topicId)
@@ -107,7 +114,7 @@ export default async function BoardTopicPage({ params }: BoardTopicPageProps) {
       .prepare(
         `SELECT id, author_display, body, heat_score, created_at
       FROM board_posts
-      WHERE topic_id = ? AND hidden = 0
+      WHERE topic_id = ? AND hidden = 0 AND review_status = 'published'
       ORDER BY id ASC`
       )
       .bind(topicId)
@@ -123,7 +130,7 @@ export default async function BoardTopicPage({ params }: BoardTopicPageProps) {
         .prepare(
           `SELECT c.id, c.answer_id, c.author_display, c.body, c.heat_score, c.created_at
         FROM board_comments c
-        WHERE c.answer_id IN (${placeholders}) AND c.hidden = 0
+        WHERE c.answer_id IN (${placeholders}) AND c.hidden = 0 AND c.review_status = 'published'
         ORDER BY c.answer_id ASC, c.id ASC`
         )
         .bind(...answerIds)
@@ -131,6 +138,26 @@ export default async function BoardTopicPage({ params }: BoardTopicPageProps) {
 
       commentsByAnswer = groupCommentsByAnswer(commentsResult.results ?? []);
     }
+
+    const headerList = await headers();
+    const ipHash = await hashIpForRateLimit(getClientIpFromHeaderGetter((name) => headerList.get(name)));
+    await ensureBoardLikesSchema(db);
+
+    const postIdList = posts.map((p) => p.id);
+    likedPostIdSet =
+      postIdList.length > 0 ? await getLikedTargetIdsForIp(db, "post", postIdList, ipHash) : new Set<number>();
+
+    const allCommentIds: number[] = [];
+    for (const p of posts) {
+      for (const c of commentsByAnswer.get(p.id) ?? []) {
+        allCommentIds.push(c.id);
+      }
+    }
+
+    likedCommentIdSet =
+      allCommentIds.length > 0
+        ? await getLikedTargetIdsForIp(db, "comment", allCommentIds, ipHash)
+        : new Set<number>();
   } catch {
     return (
       <main className="min-h-screen bg-[#f8fafc] text-slate-900">
@@ -189,10 +216,18 @@ export default async function BoardTopicPage({ params }: BoardTopicPageProps) {
                   )}
                   <span className="ml-2 text-slate-400">{post.created_at}</span>
                 </div>
-                <BoardPostLikeButton initialHeat={post.heat_score} postId={post.id} />
+                <BoardPostLikeButton
+                  initialAlreadyLiked={likedPostIdSet.has(post.id)}
+                  initialHeat={post.heat_score}
+                  postId={post.id}
+                />
               </div>
               <BoardMarkdownBody className="mt-4" markdown={post.body} />
-              <BoardCommentThread answerId={post.id} comments={commentsByAnswer.get(post.id) ?? []} />
+              <BoardCommentThread
+                answerId={post.id}
+                comments={commentsByAnswer.get(post.id) ?? []}
+                likedCommentIds={Array.from(likedCommentIdSet)}
+              />
             </article>
           ))}
         </section>

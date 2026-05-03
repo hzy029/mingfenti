@@ -35,6 +35,13 @@ CREATE TABLE IF NOT EXISTS board_posts (
   body TEXT NOT NULL,
   heat_score INTEGER NOT NULL DEFAULT 0,
   hidden INTEGER NOT NULL DEFAULT 0,
+  review_status TEXT NOT NULL DEFAULT 'published',
+  published_at TEXT,
+  reviewed_at TEXT,
+  review_provider TEXT,
+  review_model TEXT,
+  review_verdict TEXT,
+  review_reason TEXT,
   created_at TEXT NOT NULL,
   FOREIGN KEY (topic_id) REFERENCES board_topics(id)
 );
@@ -44,6 +51,9 @@ CREATE INDEX IF NOT EXISTS idx_board_posts_topic_id
 
 CREATE INDEX IF NOT EXISTS idx_board_posts_topic_heat
   ON board_posts (topic_id, heat_score);
+
+CREATE INDEX IF NOT EXISTS idx_board_posts_topic_review
+  ON board_posts (topic_id, review_status, hidden);
 
 CREATE TABLE IF NOT EXISTS board_topic_meta (
   topic_id INTEGER PRIMARY KEY,
@@ -58,6 +68,13 @@ CREATE TABLE IF NOT EXISTS board_comments (
   body TEXT NOT NULL,
   heat_score INTEGER NOT NULL DEFAULT 0,
   hidden INTEGER NOT NULL DEFAULT 0,
+  review_status TEXT NOT NULL DEFAULT 'published',
+  published_at TEXT,
+  reviewed_at TEXT,
+  review_provider TEXT,
+  review_model TEXT,
+  review_verdict TEXT,
+  review_reason TEXT,
   created_at TEXT NOT NULL,
   FOREIGN KEY (answer_id) REFERENCES board_posts(id)
 );
@@ -67,3 +84,32 @@ CREATE INDEX IF NOT EXISTS idx_board_comments_answer_id
 
 CREATE INDEX IF NOT EXISTS idx_board_comments_answer_heat
   ON board_comments (answer_id, heat_score);
+
+CREATE INDEX IF NOT EXISTS idx_board_comments_answer_review
+  ON board_comments (answer_id, review_status, hidden);
+
+CREATE TABLE IF NOT EXISTS board_daily_actions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  day_utc TEXT NOT NULL,
+  ip_hash TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_board_daily_actions_day_ip
+  ON board_daily_actions (day_utc, ip_hash);
+
+-- 回答/评论点赞去重：同一 IP（哈希）对同一目标仅计一次
+CREATE TABLE IF NOT EXISTS board_likes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  kind TEXT NOT NULL CHECK (kind IN ('post', 'comment')),
+  target_id INTEGER NOT NULL,
+  ip_hash TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  UNIQUE (kind, target_id, ip_hash)
+);
+
+CREATE INDEX IF NOT EXISTS idx_board_likes_target
+  ON board_likes (kind, target_id);
+
+CREATE INDEX IF NOT EXISTS idx_board_likes_ip_target
+  ON board_likes (ip_hash, kind, target_id);

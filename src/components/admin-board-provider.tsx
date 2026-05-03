@@ -18,6 +18,13 @@ export type AdminPost = {
   body: string;
   heat_score: number;
   hidden: number;
+  review_status: string;
+  published_at: string | null;
+  reviewed_at: string | null;
+  review_provider: string | null;
+  review_model: string | null;
+  review_verdict: string | null;
+  review_reason: string | null;
   created_at: string;
 };
 
@@ -27,8 +34,17 @@ export type AdminComment = {
   body: string;
   heat_score: number;
   hidden: number;
+  review_status: string;
+  published_at: string | null;
+  reviewed_at: string | null;
+  review_provider: string | null;
+  review_model: string | null;
+  review_verdict: string | null;
+  review_reason: string | null;
   created_at: string;
 };
+
+export type AdminReviewStatus = "pending" | "published" | "rejected";
 
 const STORAGE_KEY = "mingqing-board-admin-secret";
 
@@ -60,11 +76,13 @@ type AdminBoardContextValue = {
   loadPostsForSelectedTopic: () => Promise<void>;
   updateTopic: (topicId: number, payload: { pinWeight?: number; hidden?: boolean }) => Promise<void>;
   updatePostHidden: (postId: number, hidden: boolean) => Promise<void>;
+  updatePostReviewStatus: (postId: number, reviewStatus: AdminReviewStatus) => Promise<void>;
   savePostBody: (postId: number, body: string) => Promise<void>;
   deleteTopic: (topicId: number) => Promise<void>;
   deletePost: (postId: number) => Promise<void>;
   loadCommentsForPost: (postId: number) => void;
   updateCommentHidden: (commentId: number, hidden: boolean) => Promise<void>;
+  updateCommentReviewStatus: (commentId: number, reviewStatus: AdminReviewStatus) => Promise<void>;
   deleteComment: (commentId: number) => Promise<void>;
 };
 
@@ -209,6 +227,10 @@ export function AdminBoardProvider({ children }: { children: ReactNode }) {
     await loadTopicsWithSecret(secret);
 
     if (selectedTopicId === topicId) {
+      if (typeof payload.pinWeight === "number" && Number.isFinite(payload.pinWeight)) {
+        setPinDraft(String(payload.pinWeight));
+      }
+
       await loadPostsWithSecret(secret, topicId);
     }
   }
@@ -228,6 +250,29 @@ export function AdminBoardProvider({ children }: { children: ReactNode }) {
 
     if (!response.ok || !body.ok) {
       window.alert("更新失败");
+      return;
+    }
+
+    if (selectedTopicId !== null) {
+      await loadPostsWithSecret(secret, selectedTopicId);
+    }
+  }
+
+  async function updatePostReviewStatus(postId: number, reviewStatus: AdminReviewStatus) {
+    if (!authHeaders) {
+      window.alert("请先保存密钥");
+      return;
+    }
+
+    const response = await fetch(`/api/admin/board/posts/${postId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...authHeaders },
+      body: JSON.stringify({ reviewStatus })
+    });
+    const body = (await response.json()) as { ok?: boolean };
+
+    if (!response.ok || !body.ok) {
+      window.alert("审核状态更新失败");
       return;
     }
 
@@ -306,6 +351,29 @@ export function AdminBoardProvider({ children }: { children: ReactNode }) {
 
     if (!response.ok || !body.ok) {
       window.alert("更新失败");
+      return;
+    }
+
+    if (commentsForPostId !== null) {
+      await fetchCommentsForPost(secret, commentsForPostId);
+    }
+  }
+
+  async function updateCommentReviewStatus(commentId: number, reviewStatus: AdminReviewStatus) {
+    if (!authHeaders) {
+      window.alert("请先保存密钥");
+      return;
+    }
+
+    const response = await fetch(`/api/admin/board/comments/${commentId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...authHeaders },
+      body: JSON.stringify({ reviewStatus })
+    });
+    const body = (await response.json()) as { ok?: boolean };
+
+    if (!response.ok || !body.ok) {
+      window.alert("审核状态更新失败");
       return;
     }
 
@@ -430,11 +498,13 @@ export function AdminBoardProvider({ children }: { children: ReactNode }) {
     loadPostsForSelectedTopic,
     updateTopic,
     updatePostHidden,
+    updatePostReviewStatus,
     savePostBody,
     deleteTopic,
     deletePost,
     loadCommentsForPost,
     updateCommentHidden,
+    updateCommentReviewStatus,
     deleteComment
   };
 

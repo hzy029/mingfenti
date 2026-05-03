@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
+import { ensureBoardReviewSchema } from "@/lib/board-review";
+import { previewBoardBody, stripMarkdownForPreview } from "@/lib/board-text";
 import { getD1Database } from "@/lib/cloudflare-db";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +12,7 @@ type TopicListRow = {
   pin_weight: number;
   created_at: string;
   reply_count: number;
+  hot_preview_body: string | null;
 };
 
 export default async function BoardIndexPage() {
@@ -18,6 +21,7 @@ export default async function BoardIndexPage() {
 
   if (db) {
     try {
+      await ensureBoardReviewSchema(db);
       const { results } = await db
         .prepare(
           `SELECT
@@ -25,11 +29,23 @@ export default async function BoardIndexPage() {
             t.title,
             t.pin_weight,
             t.created_at,
-            COUNT(p.id) AS reply_count
+            COUNT(p.id) AS reply_count,
+            hot.body AS hot_preview_body
           FROM board_topics t
-          LEFT JOIN board_posts p ON p.topic_id = t.id AND p.hidden = 0
+          LEFT JOIN board_posts p ON p.topic_id = t.id AND p.hidden = 0 AND p.review_status = 'published'
+          LEFT JOIN (
+            SELECT topic_id, body FROM (
+              SELECT
+                topic_id,
+                body,
+                ROW_NUMBER() OVER (PARTITION BY topic_id ORDER BY heat_score DESC, id DESC) AS rn
+              FROM board_posts
+              WHERE hidden = 0 AND review_status = 'published'
+            )
+            WHERE rn = 1
+          ) hot ON hot.topic_id = t.id
           WHERE t.hidden = 0
-          GROUP BY t.id
+          GROUP BY t.id, t.title, t.pin_weight, t.created_at, hot.body
           ORDER BY t.pin_weight DESC, reply_count DESC, t.id DESC
           LIMIT 100`
         )
@@ -77,22 +93,38 @@ export default async function BoardIndexPage() {
             </p>
           ) : (
             <ul className="mt-4 space-y-3">
-              {topics.map((topic) => (
-                <li key={topic.id}>
-                  <Link
-                    className="flex flex-wrap items-baseline justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm transition hover:border-[#4937db]/30"
-                    href={`/board/${topic.id}`}
-                  >
-                    <span className="text-lg font-black text-slate-900">{topic.title}</span>
-                    <span className="text-sm font-bold text-slate-400">
-                      {topic.reply_count} 个回答
-                      {topic.pin_weight > 0 ? (
-                        <span className="ml-2 rounded-full bg-[#fef08a] px-2 py-0.5 text-xs font-black text-[#854d0e]">权值 {topic.pin_weight}</span>
-                      ) : null}
-                    </span>
-                  </Link>
-                </li>
-              ))}
+              {topics.map((topic) => {
+                const snippet =
+                  topic.hot_preview_body && topic.hot_preview_body.trim().length > 0
+                    ? previewBoardBody(stripMarkdownForPreview(topic.hot_preview_body), 120)
+                    : null;
+
+                return (
+                  <li key={topic.id}>
+                    <Link
+                      className="block rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm transition hover:border-[#4937db]/30"
+                      href={`/board/${topic.id}`}
+                    >
+                      <div className="flex flex-wrap items-baseline justify-between gap-3">
+                        <span className="text-lg font-black text-slate-900">{topic.title}</span>
+                        <span className="text-sm font-bold text-slate-400">
+                          {topic.reply_count} 个回答
+                          {topic.pin_weight > 0 ? (
+                            <span className="ml-2 rounded-full bg-[#fef08a] px-2 py-0.5 text-xs font-black text-[#854d0e]">
+                              权值 {topic.pin_weight}
+                            </span>
+                          ) : null}
+                        </span>
+                      </div>
+                      {snippet ? (
+                        <p className="mt-2 line-clamp-1 text-sm font-bold leading-6 text-slate-500">{snippet}</p>
+                      ) : (
+                        <p className="mt-2 text-xs font-bold text-slate-400">暂无已发布回答</p>
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </section>

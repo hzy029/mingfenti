@@ -3,6 +3,7 @@ import {
   adminBoardUnauthorizedResponse,
   isAdminBoardAuthorized
 } from "@/lib/board-admin-auth";
+import { deleteBoardLikesForTopic, ensureBoardLikesSchema } from "@/lib/board-likes";
 import { getD1Database } from "@/lib/cloudflare-db";
 
 type RouteParams = {
@@ -89,6 +90,9 @@ export async function DELETE(request: Request, context: RouteParams) {
     if (!row) {
       return Response.json({ ok: false, reason: "not-found" }, { status: 404 });
     }
+
+    await ensureBoardLikesSchema(db);
+    await deleteBoardLikesForTopic(db, topicId);
 
     await db
       .prepare(`DELETE FROM board_comments WHERE answer_id IN (SELECT id FROM board_posts WHERE topic_id = ?)`)

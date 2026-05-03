@@ -6,14 +6,17 @@ import { useState } from "react";
 type BoardPostLikeButtonProps = {
   postId: number;
   initialHeat: number;
+  /** 服务端：当前 IP 是否已在 board_likes 中对该回答点赞 */
+  initialAlreadyLiked?: boolean;
 };
 
-export function BoardPostLikeButton({ postId, initialHeat }: BoardPostLikeButtonProps) {
+export function BoardPostLikeButton({ postId, initialHeat, initialAlreadyLiked = false }: BoardPostLikeButtonProps) {
   const [heatScore, setHeatScore] = useState(initialHeat);
+  const [alreadyLiked, setAlreadyLiked] = useState(initialAlreadyLiked);
   const [pending, setPending] = useState(false);
 
   async function handleLike() {
-    if (pending) {
+    if (pending || alreadyLiked) {
       return;
     }
 
@@ -21,10 +24,15 @@ export function BoardPostLikeButton({ postId, initialHeat }: BoardPostLikeButton
 
     try {
       const response = await fetch(`/api/board/posts/${postId}/like`, { method: "POST" });
-      const payload = (await response.json()) as { ok?: boolean; heatScore?: number };
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        heatScore?: number;
+        alreadyLiked?: boolean;
+      };
 
       if (response.ok && payload.ok && typeof payload.heatScore === "number") {
         setHeatScore(payload.heatScore);
+        setAlreadyLiked(true);
       }
     } finally {
       setPending(false);
@@ -33,13 +41,18 @@ export function BoardPostLikeButton({ postId, initialHeat }: BoardPostLikeButton
 
   return (
     <button
-      className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-black text-slate-700 transition hover:border-[#4937db]/40 hover:text-[#4937db] disabled:cursor-wait disabled:opacity-60"
-      disabled={pending}
+      className={[
+        "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-60",
+        alreadyLiked
+          ? "cursor-default border-slate-100 bg-slate-50 text-slate-400"
+          : "border-slate-200 bg-white text-slate-700 hover:border-[#4937db]/40 hover:text-[#4937db]"
+      ].join(" ")}
+      disabled={pending || alreadyLiked}
       type="button"
-      onClick={handleLike}
+      onClick={() => void handleLike()}
     >
       <ThumbsUp size={16} />
-      赞同 {heatScore}
+      {alreadyLiked ? "已赞" : "赞同"} {heatScore}
     </button>
   );
 }

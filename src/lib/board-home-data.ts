@@ -1,5 +1,6 @@
 import { getD1Database } from "@/lib/cloudflare-db";
 import { previewBoardBody, stripMarkdownForPreview } from "@/lib/board-text";
+import { ensureBoardReviewSchema } from "@/lib/board-review";
 
 export type BoardHomeSlide = {
   topicId: number;
@@ -37,11 +38,13 @@ async function fetchTopPostForTopic(topicId: number): Promise<PostRow | undefine
     return undefined;
   }
 
+  await ensureBoardReviewSchema(db);
+
   const { results } = await db
     .prepare(
       `SELECT id, body, heat_score
       FROM board_posts
-      WHERE topic_id = ? AND hidden = 0
+      WHERE topic_id = ? AND hidden = 0 AND review_status = 'published'
       ORDER BY heat_score DESC, id DESC
       LIMIT 1`
     )
@@ -70,6 +73,7 @@ export async function getBoardHomeSlides(): Promise<{ pin: BoardHomeSlide | null
   }
 
   try {
+    await ensureBoardReviewSchema(db);
     const pinResult = await db
       .prepare(
         `SELECT id, title, pin_weight
@@ -97,7 +101,7 @@ export async function getBoardHomeSlides(): Promise<{ pin: BoardHomeSlide | null
           COALESCE(MAX(p.heat_score), 0) AS max_heat,
           COUNT(p.id) AS reply_count
         FROM board_topics t
-        LEFT JOIN board_posts p ON p.topic_id = t.id AND p.hidden = 0
+        LEFT JOIN board_posts p ON p.topic_id = t.id AND p.hidden = 0 AND p.review_status = 'published'
         WHERE t.hidden = 0
         GROUP BY t.id
         ORDER BY max_heat DESC, reply_count DESC, t.id DESC

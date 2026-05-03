@@ -1,4 +1,5 @@
 import { getD1Database } from "@/lib/cloudflare-db";
+import { ensureBoardReviewSchema } from "@/lib/board-review";
 
 type TopicListRow = {
   id: number;
@@ -16,6 +17,7 @@ export async function GET() {
   }
 
   try {
+    await ensureBoardReviewSchema(db);
     const { results } = await db
       .prepare(
         `SELECT
@@ -25,7 +27,7 @@ export async function GET() {
           t.created_at,
           COUNT(p.id) AS reply_count
         FROM board_topics t
-        LEFT JOIN board_posts p ON p.topic_id = t.id AND p.hidden = 0
+        LEFT JOIN board_posts p ON p.topic_id = t.id AND p.hidden = 0 AND p.review_status = 'published'
         WHERE t.hidden = 0
         GROUP BY t.id
         ORDER BY t.pin_weight DESC, reply_count DESC, t.id DESC
