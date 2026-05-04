@@ -14,6 +14,7 @@ import { BASIC_TEST_SESSION_STORAGE_KEY, parseBasicTestSession, type BasicTestSe
 const RESULT_DOWNLOAD_FILENAME = "明粉检测器ti-测试结果.png";
 const SHARE_SITE_LABEL = "mingfen.sbs";
 const SHARE_SITE_URL = "https://mingfen.sbs/";
+const SHARE_WATERMARK_LABEL = "b站契科夫的变色龙";
 
 const resultVisuals: Record<string, { image: string; tone: string; color: string; background: string }> = {
   "objective-neutral": { image: "/icons/中立理性.png", tone: "中立客观", color: "#18c48f", background: "#e8f8f4" },
@@ -77,20 +78,13 @@ function getTestModeLabel(session: BasicTestSession): string {
   return session.testVariant === "lite" ? "普通版（判断）" : "Pro 版";
 }
 
-function getScoreAxisMeta(session: BasicTestSession): {
+function getScoreAxisMeta(): {
   max: number;
   hkLabel: string;
   mpLabel: string;
 } {
   const max = BASIC_TEST_MAX_AXIS_SCORE;
-  if (session.testVariant === "lite") {
-    return {
-      max,
-      hkLabel: "理性程度（材料与制度分析）",
-      mpLabel: "明朝偏向程度"
-    };
-  }
-  return { max, hkLabel: "历史了解程度", mpLabel: "明朝偏向程度" };
+  return { max, hkLabel: "西史辨伪化程度", mpLabel: "明朝偏向程度" };
 }
 
 function getServerSessionSnapshot() {
@@ -253,7 +247,7 @@ async function downloadResultImage({
   context.fillStyle = "#15120d";
   context.font = "900 38px sans-serif";
   context.fillText("分数", 136, 590);
-  const axis = getScoreAxisMeta(session);
+  const axis = getScoreAxisMeta();
   drawShareScoreBar(context, axis.hkLabel, session.score.historyKnowledge, 136, 660, 920, axis.max);
   drawShareScoreBar(context, axis.mpLabel, session.score.mingPreference, 136, 740, 920, axis.max);
 
@@ -264,15 +258,23 @@ async function downloadResultImage({
   context.font = "400 30px sans-serif";
   drawWrappedText(context, result.summary, 136, 940, 920, 48);
 
+  const qrOuterX = 136;
+  const qrOuterY = 1138;
+  const qrOuterSize = 164;
+  const qrPadding = 12;
+  const qrInnerSize = 140;
+  const urlGap = 20;
+  const urlX = qrOuterX + qrOuterSize + urlGap;
+
   context.fillStyle = "#ffffff";
-  context.fillRect(892, 1138, 164, 164);
-  drawContainedImage(context, qrImage, 904, 1150, 140, 140);
+  context.fillRect(qrOuterX, qrOuterY, qrOuterSize, qrOuterSize);
+  drawContainedImage(context, qrImage, qrOuterX + qrPadding, qrOuterY + qrPadding, qrInnerSize, qrInnerSize);
 
   context.fillStyle = "#c2c8d4";
   context.font = "700 24px sans-serif";
-  context.fillText(SHARE_SITE_LABEL, 136, 1230);
+  context.fillText(SHARE_SITE_LABEL, urlX, 1230);
   context.textAlign = "right";
-  context.fillText("b站解雨泽熙", 860, 1230);
+  context.fillText(SHARE_WATERMARK_LABEL, 1104, 1230);
   context.textAlign = "left";
 
   const blob = await new Promise<Blob>((resolve, reject) => {
@@ -389,7 +391,7 @@ export default function BasicResultPage() {
               <h2 className="text-lg font-black sm:text-xl">分数</h2>
               <div className="mt-3 grid gap-3 sm:mt-5 sm:gap-5">
                 {(() => {
-                  const axis = getScoreAxisMeta(session);
+                  const axis = getScoreAxisMeta();
                   return (
                     <>
                       <ScoreBar label={axis.hkLabel} max={axis.max} value={session.score.historyKnowledge} />
@@ -433,7 +435,7 @@ export default function BasicResultPage() {
 
             <footer className="mt-6 flex items-center justify-between border-t border-[#15120d]/10 pt-4 text-sm font-bold text-[#c2c8d4] sm:mt-10 sm:pt-6">
               <span>{SHARE_SITE_LABEL}</span>
-              <span>b站解雨泽熙</span>
+              <span>{SHARE_WATERMARK_LABEL}</span>
             </footer>
           </div>
         </section>

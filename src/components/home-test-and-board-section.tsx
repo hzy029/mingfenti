@@ -55,7 +55,7 @@ export function HomeTestAndBoardSection({ pin }: HomeTestAndBoardSectionProps) {
             </div>
           </div>
           <p className="mt-6 flex-1 text-lg leading-8 text-white/95">
-            四选一进阶路径：在同一套题材上量化「历史了解程度」与「明朝偏向程度」，适合需要区分立场强度的深度自测。
+            四选一进阶路径：在同一套题材上量化「西史辨伪化程度」与「明朝偏向程度」，适合需要区分立场强度的深度自测。
           </p>
           <div className="mt-7 flex flex-wrap gap-2">
             <span className="rounded-full bg-white/15 px-3 py-1 text-sm font-black text-white ring-1 ring-white/25">

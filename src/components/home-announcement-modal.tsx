@@ -64,14 +64,6 @@ export function HomeAnnouncementModal() {
               >
                 @契科夫的变色龙
               </a>
-              <a
-                className="mt-2 block font-black text-[#4937db]"
-                href={siteConfig.bilibiliXieUrl}
-                target="_blank"
-                rel="noreferrer"
-              >
-                @解雨泽熙
-              </a>
             </div>
 
             <div>
@@ -85,7 +77,7 @@ export function HomeAnnouncementModal() {
                 target="_blank"
                 rel="noreferrer"
               >
-                @解雨泽熙
+                @契科夫的变色龙
               </a>
             </div>
 
