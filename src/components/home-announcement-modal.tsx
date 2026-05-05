@@ -76,8 +76,10 @@ export function HomeAnnouncementModal() {
             <div className="border-l-4 border-[#6254f3] bg-[#eef1ff] p-5">
               <h3 className="text-xl font-black">更新计划</h3>
               <div className="mt-3 space-y-2 text-lg font-bold leading-8 text-[#596174]">
-                <p>新加入普通版测试，题库有待完善，有好的想法可以发邮件到下方邮箱。</p>
-                <p>Pro 版收到较多差评，暂停更新。</p>
+                <p>
+                  新加入普通版测试，已经优化图片保存定位，题库有待完善，有好的想法可以发邮件到下方邮箱。
+                </p>
+                <p>Pro 版收到较多差评，由于更新搁置，暂停访问。</p>
                 <p>留言板功能已实装，可以在完成检测后浏览。</p>
               </div>
             </div>
