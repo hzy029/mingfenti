@@ -2,6 +2,7 @@ import { ArrowRight, BarChart3, FlaskConical } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { HomeAnnouncementModal } from "@/components/home-announcement-modal";
+import { QqInAppBrowserBanner } from "@/components/qq-in-app-browser-banner";
 import { HomeTestAndBoardSection } from "@/components/home-test-and-board-section";
 import { SiteHeader } from "@/components/site-header";
 import { siteConfig } from "@/data/site-config";
@@ -39,14 +40,17 @@ export default async function HomePage() {
 
   return (
     <main className="min-h-screen bg-[#f8fafc] text-[#050816]">
+      <QqInAppBrowserBanner />
       <HomeAnnouncementModal />
 
       <SiteHeader />
 
       <div className="bg-[#141537] text-white">
         <section className="mx-auto flex min-h-[620px] max-w-5xl flex-col items-center justify-center px-5 py-16 text-center">
-          <p className="mb-10 self-start text-lg font-black text-white md:-ml-8">
-            君非亡国之君,臣皆亡国之臣!大明有好皇帝,却无好百姓!
+          <p className="mb-10 self-start text-lg font-black leading-relaxed text-white md:-ml-8">
+            大明无好百姓,却有好太监.
+            <br />
+            一个人如果成为了明粉 那他就不是人了
           </p>
           <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 py-2 text-base font-black text-white shadow-sm">
             <span className="h-2.5 w-2.5 rounded-full bg-[#48d579]" />

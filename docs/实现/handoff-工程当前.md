@@ -88,7 +88,7 @@ npx wrangler versions upload
 ### 3.2 匿名测试统计（D1）
 
 - 表：`basic_attempts`（见 [`schema.sql`](../../schema.sql)）。
-- 写入：[`src/app/api/basic-attempts/route.ts`](../../src/app/api/basic-attempts/route.ts)；完成耗时**少于 30 秒**的记录为 `too-fast`，**不写库**。
+- 写入：[`src/app/api/basic-attempts/route.ts`](../../src/app/api/basic-attempts/route.ts)；完成耗时**少于 20 秒**的记录为 `too-fast`，**不写库**。
 - 读取与聚合：[`src/lib/basic-stats.ts`](../../src/lib/basic-stats.ts)、[`src/app/api/basic-stats/route.ts`](../../src/app/api/basic-stats/route.ts)；首页服务端拉统计。
 
 ### 3.3 留言板 + 首页版块 + 顶栏
@@ -152,7 +152,7 @@ npx wrangler versions upload
 1. **D1**：执行 `npm run d1:apply:remote`，保证表与索引与仓库 `schema.sql` 一致（含 `board_daily_actions`、`board_likes` 等留言板表）。  
 2. **密钥**：`ADMIN_BOARD_SECRET` 与 [ADMIN_BOARD_SECRET-配置说明.md](./ADMIN_BOARD_SECRET-配置说明.md)。  
 3. **线上**：管理员发主题 → 用户在主题下写回答与评论 → 首页热门与点赞是否正常。  
-4. **统计**：完成 ≥30 秒普通测试，确认 `basic_attempts` 与首页分布更新。
+4. **统计**：完成 ≥20 秒普通测试，确认 `basic_attempts` 与首页分布更新。
 
 ---
 

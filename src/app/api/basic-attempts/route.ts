@@ -11,7 +11,7 @@ type BasicAttemptPayload = {
   durationSeconds?: number;
 };
 
-const MIN_RECORDED_DURATION_SECONDS = 30;
+const MIN_RECORDED_DURATION_SECONDS = 20;
 const BASIC_ATTEMPT_DAILY_RECORD_LIMIT = 30;
 
 function isValidPayload(payload: BasicAttemptPayload) {

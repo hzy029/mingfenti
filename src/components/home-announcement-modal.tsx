@@ -5,9 +5,6 @@ import Image from "next/image";
 import { useState } from "react";
 import { siteConfig } from "@/data/site-config";
 
-const bilibiliQuoteUrl = "https://www.bilibili.com/video/BV1Pm9kBfEDw/";
-const zhihuQuoteUrl = "https://www.zhihu.com/question/2030918050808066759";
-
 export function HomeAnnouncementModal() {
   const [open, setOpen] = useState(true);
 
@@ -39,15 +36,10 @@ export function HomeAnnouncementModal() {
 
         <div className="max-h-[66vh] overflow-y-auto px-6 py-6">
           <div className="border-l-4 border-[#6254f3] bg-[#eef1ff] p-5">
-            <div className="grid gap-3 text-xl font-black leading-8">
-              <a className="text-[#111827] transition hover:text-[#4937db]" href={bilibiliQuoteUrl} target="_blank" rel="noreferrer">
-                君非亡国之君,臣皆亡国之臣!
-              </a>
-              <a className="text-[#111827] transition hover:text-[#4937db]" href={zhihuQuoteUrl} target="_blank" rel="noreferrer">
-                大明有好皇帝,却无好百姓!
-              </a>
+            <div className="grid gap-3 text-xl font-black leading-8 text-[#111827]">
+              <p>大明无好百姓,却有好太监.</p>
+              <p>一个人如果成为了明粉 那他就不是人了</p>
             </div>
-            <p className="mt-2 text-right text-base font-black text-[#596174]">------ 朱元璋梦男</p>
           </div>
 
           <div className="mt-6 grid gap-5 border-t border-[#15120d]/10 pt-6">

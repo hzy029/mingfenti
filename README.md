@@ -58,7 +58,7 @@ database_name = "mingqing-detector"
 
 - `POST /api/basic-attempts`：测试完成后写入匿名记录
 - `GET /api/basic-stats`：读取总测试次数和五类结果分布
-- 少于 30 秒完成的测试不会记录，避免异常快速提交污染统计
+- 少于 20 秒完成的测试不会记录，避免异常快速提交污染统计
 
 ## 必读文档
 
@@ -123,7 +123,7 @@ docs/
 工程侧：
 
 - 若尚未执行：对远程 D1 跑 `npm run d1:apply:remote`，包含留言板表；配置 `ADMIN_BOARD_SECRET` 后使用 `/admin/board` 管理留言
-- 线上完成一次超过 30 秒的测试，确认 `basic_attempts` 从 0 增加到 1
+- 线上完成一次超过 20 秒的测试，确认 `basic_attempts` 从 0 增加到 1
 - 确认首页“累计测试次数”和“五类结果分布”能从 D1 更新
 - 后续：P1 DeepSeek 发帖审核（未实现）；普通版（全判断题）若尚未接入，补页面与题库数据
 

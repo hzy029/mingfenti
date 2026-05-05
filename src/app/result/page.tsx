@@ -1,20 +1,23 @@
 "use client";
 
-import { ArrowRight, Download, MessageSquare, RotateCcw } from "lucide-react";
+import { ArrowRight, ChevronRight, Download, MessageSquare, RotateCcw } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import QRCode from "qrcode";
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { SiteHeader } from "@/components/site-header";
 import { BASIC_TEST_MAX_AXIS_SCORE } from "@/data/basic-test-config";
 import { basicResultTiers } from "@/data/basic-results";
 import type { BasicResultTier } from "@/data/types";
+import type { BoardHomeSlide } from "@/lib/board-home-data";
 import { BASIC_TEST_SESSION_STORAGE_KEY, parseBasicTestSession, type BasicTestSession } from "@/lib/basic-test-session";
 
 const RESULT_DOWNLOAD_FILENAME = "明粉检测器ti-测试结果.png";
 const SHARE_SITE_LABEL = "mingfen.sbs";
 const SHARE_SITE_URL = "https://mingfen.sbs/";
 const SHARE_WATERMARK_LABEL = "b站契科夫的变色龙";
+
+const RESULT_IDS_WITH_BOARD_PIN_PREVIEW = new Set<string>(["objective-neutral", "manchu-loyalist"]);
 
 const resultVisuals: Record<string, { image: string; tone: string; color: string; background: string }> = {
   "objective-neutral": { image: "/icons/中立理性.png", tone: "中立客观", color: "#18c48f", background: "#e8f8f4" },
@@ -84,23 +87,21 @@ function getScoreAxisMeta(): {
   mpLabel: string;
 } {
   const max = BASIC_TEST_MAX_AXIS_SCORE;
-  return { max, hkLabel: "西史辨伪化程度", mpLabel: "明朝偏向程度" };
+  return { max, hkLabel: "被伪史论污染程度", mpLabel: "明朝偏向程度" };
 }
 
 function getServerSessionSnapshot() {
   return null;
 }
 
-function ScoreBar({ label, value, max }: { label: string; value: number; max: number }) {
+function ScoreBar({ label, value, max, scoreText }: { label: string; value: number; max: number; scoreText?: string }) {
   const percent = Math.round((value / max) * 100);
 
   return (
     <div>
       <div className="mb-2 flex items-center justify-between text-sm font-bold">
         <span>{label}</span>
-        <span>
-          {value} / {max}
-        </span>
+        <span>{scoreText ?? `${value} / ${max}`}</span>
       </div>
       <div className="h-3 overflow-hidden rounded-full bg-[#15120d]/10">
         <div className="h-full bg-[#b72f24]" style={{ width: `${percent}%` }} />
@@ -171,7 +172,8 @@ function drawShareScoreBar(
   x: number,
   y: number,
   width: number,
-  max: number
+  max: number,
+  scoreLine?: string
 ) {
   const percent = max > 0 ? value / max : 0;
 
@@ -179,7 +181,7 @@ function drawShareScoreBar(
   context.font = "700 26px sans-serif";
   context.fillText(label, x, y);
   context.textAlign = "right";
-  context.fillText(`${value} / ${max}`, x + width, y);
+  context.fillText(scoreLine ?? `${value} / ${max}`, x + width, y);
   context.textAlign = "left";
   context.fillStyle = "#e7e1d8";
   context.fillRect(x, y + 18, width, 16);
@@ -248,7 +250,8 @@ async function downloadResultImage({
   context.font = "900 38px sans-serif";
   context.fillText("分数", 136, 590);
   const axis = getScoreAxisMeta();
-  drawShareScoreBar(context, axis.hkLabel, session.score.historyKnowledge, 136, 660, 920, axis.max);
+  const hk = session.score.historyKnowledge;
+  drawShareScoreBar(context, axis.hkLabel, hk, 136, 660, 920, axis.max, `${-hk} / ${-axis.max}`);
   drawShareScoreBar(context, axis.mpLabel, session.score.mingPreference, 136, 740, 920, axis.max);
 
   context.fillStyle = "#15120d";
@@ -299,11 +302,12 @@ async function downloadResultImage({
 
 export default function BasicResultPage() {
   const [isDownloading, setIsDownloading] = useState(false);
+  const [boardPin, setBoardPin] = useState<BoardHomeSlide | null>(null);
   const session = useSyncExternalStore(subscribeToSessionChanges, getSessionSnapshot, getServerSessionSnapshot);
   const result = useMemo(() => (session ? findResult(session.resultId) : undefined), [session]);
   const visual = result ? resultVisuals[result.id] : undefined;
 
-  async function handleDownload() {
+  const runExportResultImage = useCallback(async () => {
     if (!session || !result || !visual) {
       return;
     }
@@ -323,7 +327,49 @@ export default function BasicResultPage() {
     } finally {
       setIsDownloading(false);
     }
+  }, [session, result, visual]);
+
+  function handleDownload() {
+    void runExportResultImage();
   }
+
+  useEffect(() => {
+    if (!session || !RESULT_IDS_WITH_BOARD_PIN_PREVIEW.has(session.resultId)) {
+      setBoardPin(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    void fetch("/api/board/pin-preview")
+      .then((response) => response.json() as Promise<{ pin: BoardHomeSlide | null }>)
+      .then((data) => {
+        if (!cancelled) {
+          setBoardPin(data.pin ?? null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setBoardPin(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session, session?.resultId]);
+
+  useEffect(() => {
+    if (!session || !result || !visual) {
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => {
+      void runExportResultImage();
+    }, 5000);
+
+    return () => window.clearTimeout(timer);
+  }, [runExportResultImage, session, result, visual]);
 
   if (!session || !result || !visual) {
     return (
@@ -392,9 +438,15 @@ export default function BasicResultPage() {
               <div className="mt-3 grid gap-3 sm:mt-5 sm:gap-5">
                 {(() => {
                   const axis = getScoreAxisMeta();
+                  const hk = session.score.historyKnowledge;
                   return (
                     <>
-                      <ScoreBar label={axis.hkLabel} max={axis.max} value={session.score.historyKnowledge} />
+                      <ScoreBar
+                        label={axis.hkLabel}
+                        max={axis.max}
+                        scoreText={`${-hk} / ${-axis.max}`}
+                        value={hk}
+                      />
                       <ScoreBar label={axis.mpLabel} max={axis.max} value={session.score.mingPreference} />
                     </>
                   );
@@ -432,6 +484,25 @@ export default function BasicResultPage() {
               <h2 className="text-lg font-black text-[#8790a3] sm:text-xl">诊断结果</h2>
               <p className="mt-3 text-base font-bold leading-8 text-[#25211b] sm:mt-4 sm:text-lg sm:leading-9">{result.summary}</p>
             </section>
+
+            {RESULT_IDS_WITH_BOARD_PIN_PREVIEW.has(session.resultId) && boardPin ? (
+              <Link
+                className="mt-5 block rounded-2xl border border-[#6366f1]/30 bg-gradient-to-br from-[#eef1ff] to-white p-5 shadow-sm transition hover:border-[#6366f1]/50 hover:shadow-md sm:mt-8 sm:p-6"
+                href="/board"
+              >
+                <p className="text-xs font-black uppercase tracking-wide text-[#4937db]">留言板 · 置顶主题概要</p>
+                <h3 className="mt-2 text-lg font-black leading-snug text-[#15120d] sm:text-xl">{boardPin.topicTitle}</h3>
+                {boardPin.topPostPreview ? (
+                  <p className="mt-3 line-clamp-4 text-sm font-bold leading-7 text-[#4e4639] sm:text-base">{boardPin.topPostPreview}</p>
+                ) : (
+                  <p className="mt-3 text-sm font-bold text-[#94a3b8]">该主题下还没有公开回答。</p>
+                )}
+                <span className="mt-4 inline-flex items-center gap-1 text-sm font-black text-[#4937db] sm:text-base">
+                  进入留言板
+                  <ChevronRight className="h-4 w-4" />
+                </span>
+              </Link>
+            ) : null}
 
             <footer className="mt-6 flex items-center justify-between border-t border-[#15120d]/10 pt-4 text-sm font-bold text-[#c2c8d4] sm:mt-10 sm:pt-6">
               <span>{SHARE_SITE_LABEL}</span>

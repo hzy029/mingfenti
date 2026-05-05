@@ -705,7 +705,7 @@ zhu-yuanzhang-dreamer -> 朱元璋梦男
 注意：
 
 - `满遗` 保留为 `客观中立` 的 10% 随机彩蛋，首页统计中归入“中立正常”
-- 少于 30 秒完成的测试会返回 `too-fast`，不会写入统计
+- 少于 20 秒完成的测试会返回 `too-fast`，不会写入统计
 - 首页统计接口失败或 D1 不可用时会回落为 0 数据，不影响页面打开
 
 ### 当前脚本
@@ -734,7 +734,7 @@ npx wrangler versions upload
 ### 明天建议继续检查
 
 1. 打开 `https://mingfen.sbs/`，确认首页稳定访问。
-2. 完成一次超过 30 秒的普通测试。
+2. 完成一次超过 20 秒的普通测试。
 3. 执行 `d1:count:remote`，确认 `basic_attempts` 记录数增加。
 4. 刷新首页，确认“累计测试次数”和五类结果分布更新。
 5. 若统计不更新，优先检查 `/api/basic-attempts` 是否返回 `too-fast`、`database-not-configured` 或 `database-write-failed`。
