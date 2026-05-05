@@ -535,7 +535,7 @@ export default function BasicResultPage() {
 
   if (!session || !result || !visual) {
     return (
-      <main className="min-h-screen bg-[#f7f4ee] text-[#15120d]">
+      <main className="bg-[#f7f4ee] pb-10 text-[#15120d]">
         <SiteHeader />
         <section className="mx-auto mt-8 max-w-3xl rounded-lg border border-[#15120d]/10 bg-white p-6 shadow-sm">
           <h1 className="text-3xl font-black">没有找到答题记录</h1>
@@ -562,28 +562,32 @@ export default function BasicResultPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f7f4ee] text-[#15120d]">
+    <main className="bg-[#f7f4ee] pb-10 text-[#15120d]">
       <SiteHeader />
-      <div className="mx-auto w-full max-w-5xl px-3 py-3 sm:px-5 sm:py-6">
+      <div className="mx-auto w-full max-w-5xl px-3 py-3 sm:px-5 sm:py-5">
         <section className="overflow-hidden rounded-2xl border border-[#15120d]/10 bg-white shadow-lg sm:rounded-3xl">
           <div className="bg-white px-4 sm:px-8">
             <ShareWatermarkBar variant="cardTop" />
           </div>
           <div
-            className="grid grid-cols-[minmax(0,1fr)_7rem] items-center gap-3 p-4 sm:gap-6 sm:p-8 md:grid-cols-[1fr_300px]"
+            className="grid grid-cols-[minmax(0,1fr)_7rem] items-start gap-x-4 gap-y-4 p-4 sm:gap-x-8 sm:gap-y-5 sm:p-6 md:p-8 md:grid-cols-[1fr_300px]"
             style={{ backgroundColor: visual.background }}
           >
-            <div className="min-w-0">
-              <p className="text-xs font-black text-[#7a1f18] sm:text-sm">{getTestModeLabel(session)}测试结果</p>
-              <h1 className="mt-2 text-4xl font-black leading-tight sm:mt-4 sm:text-5xl md:text-6xl">{result.title}</h1>
+            <div className="min-w-0 self-start">
+              <p className="block text-xs font-black leading-snug text-[#7a1f18] sm:text-sm">
+                {getTestModeLabel(session)}测试结果
+              </p>
+              <h1 className="mt-3 text-4xl font-black leading-[1.12] tracking-tight sm:mt-4 sm:text-5xl sm:leading-[1.1] md:text-6xl md:leading-[1.08]">
+                {result.title}
+              </h1>
               <p
-                className="mt-3 inline-flex rounded-full bg-white/70 px-3 py-1.5 text-base font-black sm:mt-4 sm:px-4 sm:py-2 sm:text-lg"
+                className="mt-4 inline-flex rounded-full bg-white/70 px-3 py-1.5 text-base font-black sm:mt-5 sm:px-4 sm:py-2 sm:text-lg"
                 style={{ color: visual.color }}
               >
                 {visual.tone}
               </p>
             </div>
-            <div className="flex items-center justify-center">
+            <div className="flex shrink-0 items-start justify-center self-start md:self-start">
               <div className="flex h-28 w-28 items-center justify-center rounded-xl bg-white/75 p-2 sm:h-64 sm:w-64 sm:rounded-2xl sm:p-4">
                 <Image
                   alt={result.title}
@@ -597,7 +601,7 @@ export default function BasicResultPage() {
             </div>
           </div>
 
-          <div className="p-4 sm:p-8">
+          <div className="px-4 pb-5 pt-4 sm:px-8 sm:pb-6 sm:pt-5">
             <section>
               <h2 className="text-lg font-black sm:text-xl">分数</h2>
               <div className="mt-3 grid gap-3 sm:mt-5 sm:gap-5">
@@ -643,7 +647,7 @@ export default function BasicResultPage() {
               </Link>
             ) : null}
 
-            <section className="mt-5 grid grid-cols-3 gap-2 border-t border-[#15120d]/10 pt-5 sm:mt-8 sm:gap-4 sm:pt-8">
+            <section className="mt-5 grid grid-cols-3 gap-2 border-t border-[#15120d]/10 pt-4 sm:mt-6 sm:gap-4 sm:pt-6">
               <button
                 className="inline-flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg bg-[#2563eb] px-2 py-2.5 text-xs font-black leading-tight text-white transition hover:bg-[#1d4ed8] disabled:cursor-wait disabled:opacity-70 sm:flex-row sm:gap-2 sm:px-5 sm:py-4 sm:text-lg"
                 disabled={isDownloading}
