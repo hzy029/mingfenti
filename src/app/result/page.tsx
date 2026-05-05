@@ -110,6 +110,56 @@ function ScoreBar({ label, value, max, scoreText }: { label: string; value: numb
   );
 }
 
+function ShareWatermarkBar({ variant }: { variant?: "cardTop" | "content" }) {
+  const [qrSrc, setQrSrc] = useState<string | null>(null);
+  const isCardTop = variant === "cardTop";
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void QRCode.toDataURL(SHARE_SITE_URL, {
+      errorCorrectionLevel: "M",
+      margin: 1,
+      width: 160,
+      color: { dark: "#15120d", light: "#ffffff" }
+    }).then((dataUrl) => {
+      if (!cancelled) {
+        setQrSrc(dataUrl);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <div
+      className={
+        isCardTop
+          ? "flex items-center justify-between gap-3 border-b border-[#15120d]/10 py-3 sm:py-4"
+          : "mb-6 flex items-center justify-between gap-3 border-b border-[#15120d]/10 pb-5 sm:mb-8 sm:pb-6"
+      }
+    >
+      <span className="min-w-0 shrink text-sm font-bold text-[#94a3b8] sm:text-base">{SHARE_SITE_LABEL}</span>
+      {qrSrc ? (
+        <img
+          alt=""
+          className="h-[72px] w-[72px] shrink-0 rounded-md bg-white p-1 shadow-sm ring-1 ring-[#15120d]/10 sm:h-20 sm:w-20"
+          height={80}
+          src={qrSrc}
+          width={80}
+        />
+      ) : (
+        <div className="h-[72px] w-[72px] shrink-0 rounded-md bg-[#f1f5f9] sm:h-20 sm:w-20" />
+      )}
+      <span className="min-w-0 max-w-[40%] shrink text-right text-sm font-bold text-[#94a3b8] sm:max-w-none sm:text-base">
+        {SHARE_WATERMARK_LABEL}
+      </span>
+    </div>
+  );
+}
+
 function loadCanvasImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new window.Image();
@@ -189,22 +239,70 @@ function drawShareScoreBar(
   context.fillRect(x, y + 18, width * percent, 16);
 }
 
+const CANVAS_CARD_X = 80;
+const CANVAS_CARD_Y = 70;
+const CANVAS_CARD_W = 1040;
+/** 卡片顶部整块高度（白底水印条 + 彩底标题区） */
+const CANVAS_HEADER_H = 480;
+const CANVAS_WM_IN_HEADER_H = 108;
+const CANVAS_HERO_COLOR_Y = CANVAS_CARD_Y + CANVAS_WM_IN_HEADER_H;
+const CANVAS_HERO_COLOR_H = CANVAS_HEADER_H - CANVAS_WM_IN_HEADER_H;
+const CANVAS_CONTENT_BASE_Y = CANVAS_CARD_Y + CANVAS_HEADER_H + 28;
+
+function drawCanvasWatermarkStrip(context: CanvasRenderingContext2D, qrImage: HTMLImageElement, stripTopY: number) {
+  const innerLeft = CANVAS_CARD_X + 56;
+  const innerRight = CANVAS_CARD_X + CANVAS_CARD_W - 56;
+  const midX = CANVAS_CARD_X + CANVAS_CARD_W / 2;
+  const baselineY = stripTopY + 72;
+
+  context.fillStyle = "#ffffff";
+  context.fillRect(CANVAS_CARD_X, stripTopY, CANVAS_CARD_W, CANVAS_WM_IN_HEADER_H);
+
+  context.fillStyle = "#94a3b8";
+  context.font = "700 24px sans-serif";
+  context.textAlign = "left";
+  context.textBaseline = "alphabetic";
+  context.fillText(SHARE_SITE_LABEL, innerLeft, baselineY);
+
+  const qrBox = 92;
+  const qrX = midX - qrBox / 2;
+  const qrY = stripTopY + (CANVAS_WM_IN_HEADER_H - qrBox) / 2;
+  context.fillStyle = "#ffffff";
+  context.fillRect(qrX, qrY, qrBox, qrBox);
+  drawContainedImage(context, qrImage, qrX + 6, qrY + 6, qrBox - 12, qrBox - 12);
+
+  context.fillStyle = "#94a3b8";
+  context.textAlign = "right";
+  context.fillText(SHARE_WATERMARK_LABEL, innerRight, baselineY);
+  context.textAlign = "left";
+}
+
+function truncateBoardPreview(text: string, maxChars: number) {
+  if (text.length <= maxChars) {
+    return text;
+  }
+
+  return `${text.slice(0, maxChars)}…`;
+}
+
 async function downloadResultImage({
   result,
   session,
   imageSrc,
   visual,
-  testModeLabel
+  testModeLabel,
+  boardPin
 }: {
   result: BasicResultTier;
   session: BasicTestSession;
   imageSrc: string;
   visual: { tone: string; color: string; background: string };
   testModeLabel: string;
+  boardPin: BoardHomeSlide | null;
 }) {
   const canvas = document.createElement("canvas");
   canvas.width = 1200;
-  canvas.height = 1450;
+  canvas.height = 2000;
   const context = canvas.getContext("2d");
 
   if (!context) {
@@ -227,58 +325,78 @@ async function downloadResultImage({
   context.fillRect(0, 0, canvas.width, canvas.height);
 
   context.fillStyle = "#fff";
-  context.fillRect(80, 70, 1040, 1240);
+  context.fillRect(CANVAS_CARD_X, CANVAS_CARD_Y, CANVAS_CARD_W, 1820);
+
+  drawCanvasWatermarkStrip(context, qrImage, CANVAS_CARD_Y);
 
   context.fillStyle = visual.background;
-  context.fillRect(80, 70, 1040, 430);
+  context.fillRect(CANVAS_CARD_X, CANVAS_HERO_COLOR_Y, CANVAS_CARD_W, CANVAS_HERO_COLOR_H);
+
+  const heroY = CANVAS_HERO_COLOR_Y;
 
   context.fillStyle = "#7a1f18";
   context.font = "800 28px sans-serif";
-  context.fillText(`${testModeLabel}测试结果`, 136, 140);
+  context.fillText(`${testModeLabel}测试结果`, 136, heroY + 44);
 
   context.fillStyle = "#15120d";
   context.font = "900 72px sans-serif";
-  drawWrappedText(context, result.title, 136, 240, 610, 84);
+  drawWrappedText(context, result.title, 136, heroY + 96, 610, 84);
 
   context.fillStyle = visual.color;
   context.font = "900 30px sans-serif";
-  context.fillText(visual.tone, 136, 376);
+  context.fillText(visual.tone, 136, heroY + 268);
 
-  drawContainedImage(context, resultImage, 770, 130, 260, 260);
+  drawContainedImage(context, resultImage, 770, heroY + 28, 260, 260);
 
   context.fillStyle = "#15120d";
   context.font = "900 38px sans-serif";
-  context.fillText("分数", 136, 590);
+  context.fillText("分数", 136, CANVAS_CONTENT_BASE_Y);
   const axis = getScoreAxisMeta();
   const hk = session.score.historyKnowledge;
-  drawShareScoreBar(context, axis.hkLabel, hk, 136, 660, 920, axis.max, `${-hk} / ${-axis.max}`);
-  drawShareScoreBar(context, axis.mpLabel, session.score.mingPreference, 136, 740, 920, axis.max);
+  drawShareScoreBar(
+    context,
+    axis.hkLabel,
+    hk,
+    136,
+    CANVAS_CONTENT_BASE_Y + 70,
+    920,
+    axis.max,
+    `${-hk} / ${-axis.max}`
+  );
+  drawShareScoreBar(
+    context,
+    axis.mpLabel,
+    session.score.mingPreference,
+    136,
+    CANVAS_CONTENT_BASE_Y + 150,
+    920,
+    axis.max
+  );
 
   context.fillStyle = "#15120d";
   context.font = "900 38px sans-serif";
-  context.fillText("诊断结果", 136, 880);
+  context.fillText("诊断结果", 136, CANVAS_CONTENT_BASE_Y + 260);
   context.fillStyle = "#4e4639";
   context.font = "400 30px sans-serif";
-  drawWrappedText(context, result.summary, 136, 940, 920, 48);
+  let cursorY = drawWrappedText(context, result.summary, 136, CANVAS_CONTENT_BASE_Y + 320, 920, 48);
 
-  const qrOuterX = 136;
-  const qrOuterY = 1138;
-  const qrOuterSize = 164;
-  const qrPadding = 12;
-  const qrInnerSize = 140;
-  const urlGap = 20;
-  const urlX = qrOuterX + qrOuterSize + urlGap;
-
-  context.fillStyle = "#ffffff";
-  context.fillRect(qrOuterX, qrOuterY, qrOuterSize, qrOuterSize);
-  drawContainedImage(context, qrImage, qrOuterX + qrPadding, qrOuterY + qrPadding, qrInnerSize, qrInnerSize);
-
-  context.fillStyle = "#c2c8d4";
-  context.font = "700 24px sans-serif";
-  context.fillText(SHARE_SITE_LABEL, urlX, 1230);
-  context.textAlign = "right";
-  context.fillText(SHARE_WATERMARK_LABEL, 1104, 1230);
-  context.textAlign = "left";
+  if (boardPin?.topicTitle) {
+    cursorY += 36;
+    context.fillStyle = "#4937db";
+    context.font = "700 22px sans-serif";
+    context.fillText("留言板 · 置顶主题概要", 136, cursorY);
+    cursorY += 40;
+    context.fillStyle = "#15120d";
+    context.font = "900 28px sans-serif";
+    cursorY = drawWrappedText(context, boardPin.topicTitle, 136, cursorY, 920, 36);
+    context.fillStyle = "#4e4639";
+    context.font = "400 26px sans-serif";
+    const preview =
+      boardPin.topPostPreview != null && boardPin.topPostPreview.length > 0
+        ? truncateBoardPreview(boardPin.topPostPreview, 320)
+        : "该主题下还没有公开回答。";
+    cursorY = drawWrappedText(context, preview, 136, cursorY, 920, 40);
+  }
 
   const blob = await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob((resultBlob) => {
@@ -320,14 +438,15 @@ export default function BasicResultPage() {
         session,
         imageSrc: visual.image,
         visual,
-        testModeLabel: getTestModeLabel(session)
+        testModeLabel: getTestModeLabel(session),
+        boardPin
       });
     } catch {
       window.alert("生成结果图片失败，请稍后再试。");
     } finally {
       setIsDownloading(false);
     }
-  }, [session, result, visual]);
+  }, [session, result, visual, boardPin]);
 
   function handleDownload() {
     void runExportResultImage();
@@ -404,6 +523,9 @@ export default function BasicResultPage() {
       <SiteHeader />
       <div className="mx-auto w-full max-w-5xl px-3 py-3 sm:px-5 sm:py-6">
         <section className="overflow-hidden rounded-2xl border border-[#15120d]/10 bg-white shadow-lg sm:rounded-3xl">
+          <div className="bg-white px-4 sm:px-8">
+            <ShareWatermarkBar variant="cardTop" />
+          </div>
           <div
             className="grid grid-cols-[minmax(0,1fr)_7rem] items-center gap-3 p-4 sm:gap-6 sm:p-8 md:grid-cols-[1fr_300px]"
             style={{ backgroundColor: visual.background }}
@@ -454,32 +576,6 @@ export default function BasicResultPage() {
               </div>
             </section>
 
-            <section className="mt-4 grid grid-cols-3 gap-2 sm:mt-8 sm:gap-4">
-              <button
-                className="inline-flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg bg-[#2563eb] px-2 py-2.5 text-xs font-black leading-tight text-white transition hover:bg-[#1d4ed8] disabled:cursor-wait disabled:opacity-70 sm:flex-row sm:gap-2 sm:px-5 sm:py-4 sm:text-lg"
-                disabled={isDownloading}
-                type="button"
-                onClick={handleDownload}
-              >
-                <Download className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />
-                <span>{isDownloading ? "生成中" : "保存图片"}</span>
-              </button>
-              <Link
-                className="inline-flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg bg-[#475569] px-2 py-2.5 text-xs font-black leading-tight text-white transition hover:bg-[#334155] sm:flex-row sm:gap-2 sm:px-5 sm:py-4 sm:text-lg"
-                href={getRetestHref(session)}
-              >
-                <RotateCcw className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />
-                <span>重新测试</span>
-              </Link>
-              <Link
-                className="inline-flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg border-2 border-[#6366f1] bg-[#eef1ff] px-2 py-2.5 text-xs font-black leading-tight text-[#4338ca] transition hover:bg-[#e0e7ff] sm:flex-row sm:gap-2 sm:px-5 sm:py-4 sm:text-lg"
-                href="/board"
-              >
-                <MessageSquare className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />
-                <span>留言板</span>
-              </Link>
-            </section>
-
             <section className="mt-5 border-t border-[#15120d]/10 pt-5 sm:mt-8 sm:pt-8">
               <h2 className="text-lg font-black text-[#8790a3] sm:text-xl">诊断结果</h2>
               <p className="mt-3 text-base font-bold leading-8 text-[#25211b] sm:mt-4 sm:text-lg sm:leading-9">{result.summary}</p>
@@ -504,10 +600,31 @@ export default function BasicResultPage() {
               </Link>
             ) : null}
 
-            <footer className="mt-6 flex items-center justify-between border-t border-[#15120d]/10 pt-4 text-sm font-bold text-[#c2c8d4] sm:mt-10 sm:pt-6">
-              <span>{SHARE_SITE_LABEL}</span>
-              <span>{SHARE_WATERMARK_LABEL}</span>
-            </footer>
+            <section className="mt-5 grid grid-cols-3 gap-2 border-t border-[#15120d]/10 pt-5 sm:mt-8 sm:gap-4 sm:pt-8">
+              <button
+                className="inline-flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg bg-[#2563eb] px-2 py-2.5 text-xs font-black leading-tight text-white transition hover:bg-[#1d4ed8] disabled:cursor-wait disabled:opacity-70 sm:flex-row sm:gap-2 sm:px-5 sm:py-4 sm:text-lg"
+                disabled={isDownloading}
+                type="button"
+                onClick={handleDownload}
+              >
+                <Download className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />
+                <span>{isDownloading ? "生成中" : "保存图片"}</span>
+              </button>
+              <Link
+                className="inline-flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg bg-[#475569] px-2 py-2.5 text-xs font-black leading-tight text-white transition hover:bg-[#334155] sm:flex-row sm:gap-2 sm:px-5 sm:py-4 sm:text-lg"
+                href={getRetestHref(session)}
+              >
+                <RotateCcw className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />
+                <span>重新测试</span>
+              </Link>
+              <Link
+                className="inline-flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg border-2 border-[#6366f1] bg-[#eef1ff] px-2 py-2.5 text-xs font-black leading-tight text-[#4338ca] transition hover:bg-[#e0e7ff] sm:flex-row sm:gap-2 sm:px-5 sm:py-4 sm:text-lg"
+                href="/board"
+              >
+                <MessageSquare className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />
+                <span>留言板</span>
+              </Link>
+            </section>
           </div>
         </section>
       </div>
