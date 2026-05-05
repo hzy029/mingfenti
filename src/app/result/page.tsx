@@ -13,6 +13,33 @@ import type { BoardHomeSlide } from "@/lib/board-home-data";
 import { BASIC_TEST_SESSION_STORAGE_KEY, parseBasicTestSession, type BasicTestSession } from "@/lib/basic-test-session";
 
 const RESULT_DOWNLOAD_FILENAME = "明粉检测器ti-测试结果.png";
+/** 同一浏览器：自动保存成功后 24h 内不再自动触发；超时后可再触发一次。值为成功时的时间戳毫秒。 */
+const RESULT_AUTO_DOWNLOAD_ONCE_KEY = "mingfen.resultAutoDownloadOnce";
+const RESULT_AUTO_DOWNLOAD_TTL_MS = 24 * 60 * 60 * 1000;
+
+function readLastAutoResultDownloadAt(): number | null {
+  try {
+    const raw = window.localStorage.getItem(RESULT_AUTO_DOWNLOAD_ONCE_KEY);
+    if (!raw) {
+      return null;
+    }
+    if (raw === "1") {
+      return null;
+    }
+    const at = Number(raw);
+    return Number.isFinite(at) && at > 1e12 ? at : null;
+  } catch {
+    return null;
+  }
+}
+
+function shouldSkipAutoResultDownload(): boolean {
+  const at = readLastAutoResultDownloadAt();
+  if (at == null) {
+    return false;
+  }
+  return Date.now() - at < RESULT_AUTO_DOWNLOAD_TTL_MS;
+}
 const SHARE_SITE_LABEL = "mingfen.sbs";
 const SHARE_SITE_URL = "https://mingfen.sbs/";
 const SHARE_WATERMARK_LABEL = "b站契科夫的变色龙";
@@ -425,9 +452,9 @@ export default function BasicResultPage() {
   const result = useMemo(() => (session ? findResult(session.resultId) : undefined), [session]);
   const visual = result ? resultVisuals[result.id] : undefined;
 
-  const runExportResultImage = useCallback(async () => {
+  const runExportResultImage = useCallback(async (): Promise<boolean> => {
     if (!session || !result || !visual) {
-      return;
+      return false;
     }
 
     setIsDownloading(true);
@@ -441,8 +468,10 @@ export default function BasicResultPage() {
         testModeLabel: getTestModeLabel(session),
         boardPin
       });
+      return true;
     } catch {
       window.alert("生成结果图片失败，请稍后再试。");
+      return false;
     } finally {
       setIsDownloading(false);
     }
@@ -483,8 +512,22 @@ export default function BasicResultPage() {
       return undefined;
     }
 
+    if (shouldSkipAutoResultDownload()) {
+      return undefined;
+    }
+
     const timer = window.setTimeout(() => {
-      void runExportResultImage();
+      void (async () => {
+        const ok = await runExportResultImage();
+        if (!ok) {
+          return;
+        }
+        try {
+          window.localStorage.setItem(RESULT_AUTO_DOWNLOAD_ONCE_KEY, String(Date.now()));
+        } catch {
+          /* ignore */
+        }
+      })();
     }, 5000);
 
     return () => window.clearTimeout(timer);
