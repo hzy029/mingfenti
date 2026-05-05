@@ -1,4 +1,4 @@
-import { ArrowRight, BarChart3, FlaskConical } from "lucide-react";
+import { ArrowRight, BarChart3 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { HomeAnnouncementModal } from "@/components/home-announcement-modal";
@@ -73,13 +73,6 @@ export default async function HomePage() {
             >
               普通测试
               <ArrowRight size={24} />
-            </Link>
-            <Link
-              className="inline-flex min-w-56 items-center justify-center gap-2 rounded-2xl border-2 border-white/40 bg-white/15 px-8 py-5 text-2xl font-black text-white shadow-lg transition hover:bg-white/25"
-              href="/pro-test"
-            >
-              <FlaskConical size={28} />
-              Pro 测试
             </Link>
           </div>
 

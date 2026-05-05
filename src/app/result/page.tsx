@@ -360,20 +360,24 @@ async function downloadResultImage({
   context.fillRect(CANVAS_CARD_X, CANVAS_HERO_COLOR_Y, CANVAS_CARD_W, CANVAS_HERO_COLOR_H);
 
   const heroY = CANVAS_HERO_COLOR_Y;
+  /** 与 `drawWrappedText` 首行基线间距：须大于副标题字号的上伸区 + 主标题 72px 的上伸区，否则会与「××测试结果」重叠 */
+  const heroSubtitleBaseline = 42;
+  const heroTitleBaseline = 128;
+  const heroToneBaseline = 300;
 
   context.fillStyle = "#7a1f18";
   context.font = "800 28px sans-serif";
-  context.fillText(`${testModeLabel}测试结果`, 136, heroY + 44);
+  context.fillText(`${testModeLabel}测试结果`, 136, heroY + heroSubtitleBaseline);
 
   context.fillStyle = "#15120d";
   context.font = "900 72px sans-serif";
-  drawWrappedText(context, result.title, 136, heroY + 96, 610, 84);
+  drawWrappedText(context, result.title, 136, heroY + heroTitleBaseline, 610, 84);
 
   context.fillStyle = visual.color;
   context.font = "900 30px sans-serif";
-  context.fillText(visual.tone, 136, heroY + 268);
+  context.fillText(visual.tone, 136, heroY + heroToneBaseline);
 
-  drawContainedImage(context, resultImage, 770, heroY + 28, 260, 260);
+  drawContainedImage(context, resultImage, 770, heroY + 36, 260, 260);
 
   context.fillStyle = "#15120d";
   context.font = "900 38px sans-serif";
