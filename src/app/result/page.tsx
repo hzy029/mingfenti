@@ -186,6 +186,33 @@ function drawWrappedText(
   return cursorY + lineHeight;
 }
 
+/** 与 `drawWrappedText` 同一换行规则，仅用于测量末尾 Y，避免导出图固定卡片高度造成大块留白 */
+function measureWrappedText(
+  context: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  startY: number,
+  maxWidth: number,
+  lineHeight: number
+) {
+  const characters = Array.from(text);
+  let line = "";
+  let cursorY = startY;
+
+  characters.forEach((character) => {
+    const testLine = `${line}${character}`;
+
+    if (context.measureText(testLine).width > maxWidth && line) {
+      line = character;
+      cursorY += lineHeight;
+    } else {
+      line = testLine;
+    }
+  });
+
+  return cursorY + lineHeight;
+}
+
 function drawContainedImage(
   context: CanvasRenderingContext2D,
   image: HTMLImageElement,
@@ -234,8 +261,9 @@ const CANVAS_WM_IN_HEADER_H = 0;
 const CANVAS_HERO_COLOR_Y = CANVAS_CARD_Y + CANVAS_WM_IN_HEADER_H;
 const CANVAS_HERO_COLOR_H = CANVAS_HEADER_H - CANVAS_WM_IN_HEADER_H;
 const CANVAS_CONTENT_BASE_Y = CANVAS_CARD_Y + CANVAS_HEADER_H + 28;
-const CANVAS_CARD_BODY_H = 1820;
 const CANVAS_FOOTER_H = 72;
+/** 诊断/留言内容与底栏之间的留白，与页面观感接近 */
+const CANVAS_GAP_BEFORE_FOOTER = 48;
 
 function drawCanvasFooterStrip(context: CanvasRenderingContext2D, stripTopY: number) {
   const innerLeft = CANVAS_CARD_X + 56;
@@ -271,6 +299,29 @@ function truncateBoardPreview(text: string, maxChars: number) {
   return `${text.slice(0, maxChars)}…`;
 }
 
+function computeFooterStripTop(
+  ctx: CanvasRenderingContext2D,
+  result: BasicResultTier,
+  boardPin: BoardHomeSlide | null
+): number {
+  ctx.font = "400 30px sans-serif";
+  let cursorY = measureWrappedText(ctx, result.summary, 136, CANVAS_CONTENT_BASE_Y + 320, 920, 48);
+
+  if (boardPin?.topicTitle) {
+    cursorY += 76;
+    ctx.font = "900 28px sans-serif";
+    cursorY = measureWrappedText(ctx, boardPin.topicTitle, 136, cursorY, 920, 36);
+    ctx.font = "400 26px sans-serif";
+    const preview =
+      boardPin.topPostPreview != null && boardPin.topPostPreview.length > 0
+        ? truncateBoardPreview(boardPin.topPostPreview, 320)
+        : "该主题下还没有公开回答。";
+    cursorY = measureWrappedText(ctx, preview, 136, cursorY, 920, 40);
+  }
+
+  return cursorY + CANVAS_GAP_BEFORE_FOOTER;
+}
+
 async function downloadResultImage({
   result,
   session,
@@ -286,9 +337,18 @@ async function downloadResultImage({
   testModeLabel: string;
   boardPin: BoardHomeSlide | null;
 }) {
+  const measureCanvas = document.createElement("canvas");
+  const measureCtx = measureCanvas.getContext("2d");
+  if (!measureCtx) {
+    throw new Error("Canvas is not available.");
+  }
+  const footerStripTop = computeFooterStripTop(measureCtx, result, boardPin);
+  const footerBottom = footerStripTop + CANVAS_FOOTER_H;
+  const canvasHeight = footerBottom + CANVAS_CARD_Y;
+
   const canvas = document.createElement("canvas");
   canvas.width = 1200;
-  canvas.height = 2000;
+  canvas.height = canvasHeight;
   const context = canvas.getContext("2d");
 
   if (!context) {
@@ -301,7 +361,7 @@ async function downloadResultImage({
   context.fillRect(0, 0, canvas.width, canvas.height);
 
   context.fillStyle = "#fff";
-  context.fillRect(CANVAS_CARD_X, CANVAS_CARD_Y, CANVAS_CARD_W, CANVAS_CARD_BODY_H);
+  context.fillRect(CANVAS_CARD_X, CANVAS_CARD_Y, CANVAS_CARD_W, footerBottom - CANVAS_CARD_Y);
 
   context.fillStyle = visual.background;
   context.fillRect(CANVAS_CARD_X, CANVAS_HERO_COLOR_Y, CANVAS_CARD_W, CANVAS_HERO_COLOR_H);
@@ -376,7 +436,7 @@ async function downloadResultImage({
     cursorY = drawWrappedText(context, preview, 136, cursorY, 920, 40);
   }
 
-  drawCanvasFooterStrip(context, CANVAS_CARD_Y + CANVAS_CARD_BODY_H - CANVAS_FOOTER_H);
+  drawCanvasFooterStrip(context, footerStripTop);
 
   const blob = await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob((resultBlob) => {
