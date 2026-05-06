@@ -5,6 +5,7 @@
 ## 当前状态
 
 - **产品文档（真值）**：**普通版** = 20 道**判断题**、一维计分；**Pro 版** = 20 道**四选一**、双轴计分；两套共用同一套 `resultId`（见 `docs/详细设计/basic-evaluation-standard.md`）。原「四维 Pro」已废止（见 `docs/详细设计/pro-evaluation-standard.md` 附录）。
+- **普通版判断题（Lite）**：题库真值为 `docs/详细设计/题库/lite/` 下 Markdown；运行 `npm run generate:lite-bank` 生成 [`src/data/lite-bank-data.ts`](src/data/lite-bank-data.ts) 并提交。仅校验不写文件：`npm run generate:lite-bank:check`。说明见 [`docs/详细设计/题库/lite/lite-接入实现说明.md`](docs/详细设计/题库/lite/lite-接入实现说明.md)。
 - **工程落地进度**：MVP 当前实现为双轴四选一（与文档中的 Pro 一致）；判断题普通版流程待开发。
 - Pro（双轴）题库当前约 111 题文档体量，每次随机抽 20 题：核心题 6 道，补充题 14 道
 - 项目已接入 Cloudflare Workers + OpenNext + D1

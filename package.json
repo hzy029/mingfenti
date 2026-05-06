@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit",
     "export:lite-judgment-md": "tsx scripts/export-lite-judgment-md.ts",
     "generate:lite-bank": "tsx scripts/generate-lite-bank-data.ts",
+    "generate:lite-bank:check": "tsx scripts/generate-lite-bank-data.ts --check-only",
     "cf:build": "npx @opennextjs/cloudflare build",
     "cf:deploy": "npx @opennextjs/cloudflare deploy",
     "preview": "npm run cf:build && npx @opennextjs/cloudflare preview",

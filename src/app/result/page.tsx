@@ -3,7 +3,6 @@
 import { ArrowRight, ChevronRight, Download, MessageSquare, RotateCcw } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import QRCode from "qrcode";
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { SiteHeader } from "@/components/site-header";
 import { BASIC_TEST_MAX_AXIS_SCORE } from "@/data/basic-test-config";
@@ -41,7 +40,6 @@ function shouldSkipAutoResultDownload(): boolean {
   return Date.now() - at < RESULT_AUTO_DOWNLOAD_TTL_MS;
 }
 const SHARE_SITE_LABEL = "mingfen.sbs";
-const SHARE_SITE_URL = "https://mingfen.sbs/";
 const SHARE_WATERMARK_LABEL = "b站契科夫的变色龙";
 
 const RESULT_IDS_WITH_BOARD_PIN_PREVIEW = new Set<string>(["objective-neutral", "manchu-loyalist"]);
@@ -137,52 +135,13 @@ function ScoreBar({ label, value, max, scoreText }: { label: string; value: numb
   );
 }
 
-function ShareWatermarkBar({ variant }: { variant?: "cardTop" | "content" }) {
-  const [qrSrc, setQrSrc] = useState<string | null>(null);
-  const isCardTop = variant === "cardTop";
-
-  useEffect(() => {
-    let cancelled = false;
-
-    void QRCode.toDataURL(SHARE_SITE_URL, {
-      errorCorrectionLevel: "M",
-      margin: 1,
-      width: 160,
-      color: { dark: "#15120d", light: "#ffffff" }
-    }).then((dataUrl) => {
-      if (!cancelled) {
-        setQrSrc(dataUrl);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
+function ResultSiteFooter({ className }: { className?: string }) {
   return (
     <div
-      className={
-        isCardTop
-          ? "flex items-center justify-between gap-3 border-b border-[#15120d]/10 py-3 sm:py-4"
-          : "mb-6 flex items-center justify-between gap-3 border-b border-[#15120d]/10 pb-5 sm:mb-8 sm:pb-6"
-      }
+      className={`flex items-center justify-between gap-3 border-t border-[#15120d]/10 pt-4 text-sm font-bold text-[#94a3b8] sm:pt-5 sm:text-base ${className ?? ""}`}
     >
-      <span className="min-w-0 shrink text-sm font-bold text-[#94a3b8] sm:text-base">{SHARE_SITE_LABEL}</span>
-      {qrSrc ? (
-        <img
-          alt=""
-          className="h-[72px] w-[72px] shrink-0 rounded-md bg-white p-1 shadow-sm ring-1 ring-[#15120d]/10 sm:h-20 sm:w-20"
-          height={80}
-          src={qrSrc}
-          width={80}
-        />
-      ) : (
-        <div className="h-[72px] w-[72px] shrink-0 rounded-md bg-[#f1f5f9] sm:h-20 sm:w-20" />
-      )}
-      <span className="min-w-0 max-w-[40%] shrink text-right text-sm font-bold text-[#94a3b8] sm:max-w-none sm:text-base">
-        {SHARE_WATERMARK_LABEL}
-      </span>
+      <span className="min-w-0 shrink">{SHARE_SITE_LABEL}</span>
+      <span className="min-w-0 shrink text-right">{SHARE_WATERMARK_LABEL}</span>
     </div>
   );
 }
@@ -269,21 +228,29 @@ function drawShareScoreBar(
 const CANVAS_CARD_X = 80;
 const CANVAS_CARD_Y = 70;
 const CANVAS_CARD_W = 1040;
-/** 卡片顶部整块高度（白底水印条 + 彩底标题区） */
+/** 卡片顶部彩底标题区高度（无顶栏二维码条时整块为彩底） */
 const CANVAS_HEADER_H = 480;
-const CANVAS_WM_IN_HEADER_H = 108;
+const CANVAS_WM_IN_HEADER_H = 0;
 const CANVAS_HERO_COLOR_Y = CANVAS_CARD_Y + CANVAS_WM_IN_HEADER_H;
 const CANVAS_HERO_COLOR_H = CANVAS_HEADER_H - CANVAS_WM_IN_HEADER_H;
 const CANVAS_CONTENT_BASE_Y = CANVAS_CARD_Y + CANVAS_HEADER_H + 28;
+const CANVAS_CARD_BODY_H = 1820;
+const CANVAS_FOOTER_H = 72;
 
-function drawCanvasWatermarkStrip(context: CanvasRenderingContext2D, qrImage: HTMLImageElement, stripTopY: number) {
+function drawCanvasFooterStrip(context: CanvasRenderingContext2D, stripTopY: number) {
   const innerLeft = CANVAS_CARD_X + 56;
   const innerRight = CANVAS_CARD_X + CANVAS_CARD_W - 56;
-  const midX = CANVAS_CARD_X + CANVAS_CARD_W / 2;
-  const baselineY = stripTopY + 72;
+  const baselineY = stripTopY + CANVAS_FOOTER_H / 2 + 8;
 
   context.fillStyle = "#ffffff";
-  context.fillRect(CANVAS_CARD_X, stripTopY, CANVAS_CARD_W, CANVAS_WM_IN_HEADER_H);
+  context.fillRect(CANVAS_CARD_X, stripTopY, CANVAS_CARD_W, CANVAS_FOOTER_H);
+
+  context.strokeStyle = "#e2e8f0";
+  context.lineWidth = 1;
+  context.beginPath();
+  context.moveTo(innerLeft, stripTopY + 0.5);
+  context.lineTo(innerRight, stripTopY + 0.5);
+  context.stroke();
 
   context.fillStyle = "#94a3b8";
   context.font = "700 24px sans-serif";
@@ -291,14 +258,6 @@ function drawCanvasWatermarkStrip(context: CanvasRenderingContext2D, qrImage: HT
   context.textBaseline = "alphabetic";
   context.fillText(SHARE_SITE_LABEL, innerLeft, baselineY);
 
-  const qrBox = 92;
-  const qrX = midX - qrBox / 2;
-  const qrY = stripTopY + (CANVAS_WM_IN_HEADER_H - qrBox) / 2;
-  context.fillStyle = "#ffffff";
-  context.fillRect(qrX, qrY, qrBox, qrBox);
-  drawContainedImage(context, qrImage, qrX + 6, qrY + 6, qrBox - 12, qrBox - 12);
-
-  context.fillStyle = "#94a3b8";
   context.textAlign = "right";
   context.fillText(SHARE_WATERMARK_LABEL, innerRight, baselineY);
   context.textAlign = "left";
@@ -337,24 +296,12 @@ async function downloadResultImage({
   }
 
   const resultImage = await loadCanvasImage(imageSrc);
-  const qrDataUrl = await QRCode.toDataURL(SHARE_SITE_URL, {
-    errorCorrectionLevel: "M",
-    margin: 1,
-    scale: 8,
-    color: {
-      dark: "#15120d",
-      light: "#ffffff"
-    }
-  });
-  const qrImage = await loadCanvasImage(qrDataUrl);
 
   context.fillStyle = "#f7f4ee";
   context.fillRect(0, 0, canvas.width, canvas.height);
 
   context.fillStyle = "#fff";
-  context.fillRect(CANVAS_CARD_X, CANVAS_CARD_Y, CANVAS_CARD_W, 1820);
-
-  drawCanvasWatermarkStrip(context, qrImage, CANVAS_CARD_Y);
+  context.fillRect(CANVAS_CARD_X, CANVAS_CARD_Y, CANVAS_CARD_W, CANVAS_CARD_BODY_H);
 
   context.fillStyle = visual.background;
   context.fillRect(CANVAS_CARD_X, CANVAS_HERO_COLOR_Y, CANVAS_CARD_W, CANVAS_HERO_COLOR_H);
@@ -428,6 +375,8 @@ async function downloadResultImage({
         : "该主题下还没有公开回答。";
     cursorY = drawWrappedText(context, preview, 136, cursorY, 920, 40);
   }
+
+  drawCanvasFooterStrip(context, CANVAS_CARD_Y + CANVAS_CARD_BODY_H - CANVAS_FOOTER_H);
 
   const blob = await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob((resultBlob) => {
@@ -570,9 +519,6 @@ export default function BasicResultPage() {
       <SiteHeader />
       <div className="mx-auto w-full max-w-5xl px-3 py-3 sm:px-5 sm:py-5">
         <section className="overflow-hidden rounded-2xl border border-[#15120d]/10 bg-white shadow-lg sm:rounded-3xl">
-          <div className="bg-white px-4 sm:px-8">
-            <ShareWatermarkBar variant="cardTop" />
-          </div>
           <div
             className="grid grid-cols-[minmax(0,1fr)_7rem] items-start gap-x-4 gap-y-4 p-4 sm:gap-x-8 sm:gap-y-5 sm:p-6 md:p-8 md:grid-cols-[1fr_300px]"
             style={{ backgroundColor: visual.background }}
@@ -676,6 +622,8 @@ export default function BasicResultPage() {
                 <span>留言板</span>
               </Link>
             </section>
+
+            <ResultSiteFooter />
           </div>
         </section>
       </div>
