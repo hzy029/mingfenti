@@ -80,15 +80,11 @@ export function BoardAnswerForm({ topicId }: BoardAnswerFormProps) {
       <section className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-6">
         <h2 className="text-lg font-black text-amber-950">写回答</h2>
         <p className="mt-3 text-sm font-bold leading-7 text-amber-900">
-          浏览主题与回答不受限；发布回答需先完成测验（
+          浏览主题与回答不受限；发布回答需先完成
           <Link className="mx-1 font-black text-[#4937db] underline" href="/test">
             普通测试
           </Link>
-          或
-          <Link className="mx-1 font-black text-[#4937db] underline" href="/pro-test">
-            Pro 测试
-          </Link>
-          ）并取得发帖资格（以当前浏览器会话为准）。
+          并取得发帖资格（以当前浏览器会话为准）。
         </p>
       </section>
     );

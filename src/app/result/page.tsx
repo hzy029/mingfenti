@@ -11,7 +11,7 @@ import type { BasicResultTier } from "@/data/types";
 import type { BoardHomeSlide } from "@/lib/board-home-data";
 import { BASIC_TEST_SESSION_STORAGE_KEY, parseBasicTestSession, type BasicTestSession } from "@/lib/basic-test-session";
 
-const RESULT_DOWNLOAD_FILENAME = "明粉检测器ti-测试结果.png";
+const RESULT_DOWNLOAD_FILENAME = "新明粉检测器-测试结果.png";
 /** 同一浏览器：自动保存成功后 24h 内不再自动触发；超时后可再触发一次。值为成功时的时间戳毫秒。 */
 const RESULT_AUTO_DOWNLOAD_ONCE_KEY = "mingfen.resultAutoDownloadOnce";
 const RESULT_AUTO_DOWNLOAD_TTL_MS = 24 * 60 * 60 * 1000;
@@ -98,8 +98,8 @@ function getSessionSnapshot(): BasicTestSession | null {
   return parsed;
 }
 
-function getRetestHref(session: BasicTestSession): string {
-  return session.testVariant === "lite" ? "/test" : "/pro-test";
+function getRetestHref() {
+  return "/test";
 }
 
 function getTestModeLabel(session: BasicTestSession): string {
@@ -464,6 +464,8 @@ export default function BasicResultPage() {
   const session = useSyncExternalStore(subscribeToSessionChanges, getSessionSnapshot, getServerSessionSnapshot);
   const result = useMemo(() => (session ? findResult(session.resultId) : undefined), [session]);
   const visual = result ? resultVisuals[result.id] : undefined;
+  const shouldShowBoardPin = session ? RESULT_IDS_WITH_BOARD_PIN_PREVIEW.has(session.resultId) : false;
+  const visibleBoardPin = shouldShowBoardPin ? boardPin : null;
 
   const runExportResultImage = useCallback(async (): Promise<boolean> => {
     if (!session || !result || !visual) {
@@ -479,7 +481,7 @@ export default function BasicResultPage() {
         imageSrc: visual.image,
         visual,
         testModeLabel: getTestModeLabel(session),
-        boardPin
+        boardPin: visibleBoardPin
       });
       return true;
     } catch {
@@ -488,15 +490,14 @@ export default function BasicResultPage() {
     } finally {
       setIsDownloading(false);
     }
-  }, [session, result, visual, boardPin]);
+  }, [session, result, visual, visibleBoardPin]);
 
   function handleDownload() {
     void runExportResultImage();
   }
 
   useEffect(() => {
-    if (!session || !RESULT_IDS_WITH_BOARD_PIN_PREVIEW.has(session.resultId)) {
-      setBoardPin(null);
+    if (!shouldShowBoardPin) {
       return undefined;
     }
 
@@ -518,7 +519,7 @@ export default function BasicResultPage() {
     return () => {
       cancelled = true;
     };
-  }, [session, session?.resultId]);
+  }, [shouldShowBoardPin]);
 
   useEffect(() => {
     if (!session || !result || !visual) {
@@ -552,20 +553,13 @@ export default function BasicResultPage() {
         <SiteHeader />
         <section className="mx-auto mt-8 max-w-3xl rounded-lg border border-[#15120d]/10 bg-white p-6 shadow-sm">
           <h1 className="text-3xl font-black">没有找到答题记录</h1>
-          <p className="mt-4 leading-7 text-[#4e4639]">请先完成普通测试（判断）或 Pro 测试，再查看结果。</p>
+          <p className="mt-4 leading-7 text-[#4e4639]">请先完成普通测试（判断），再查看结果。</p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
               className="inline-flex items-center gap-2 rounded-md bg-[#b72f24] px-5 py-3 font-bold text-white"
               href="/test"
             >
               普通测试
-              <ArrowRight size={18} />
-            </Link>
-            <Link
-              className="inline-flex items-center gap-2 rounded-md border-2 border-[#4937db] bg-[#eef1ff] px-5 py-3 font-bold text-[#4338ca]"
-              href="/pro-test"
-            >
-              Pro 测试
               <ArrowRight size={18} />
             </Link>
           </div>
@@ -638,15 +632,15 @@ export default function BasicResultPage() {
               <p className="mt-3 text-base font-bold leading-8 text-[#25211b] sm:mt-4 sm:text-lg sm:leading-9">{result.summary}</p>
             </section>
 
-            {RESULT_IDS_WITH_BOARD_PIN_PREVIEW.has(session.resultId) && boardPin ? (
+            {visibleBoardPin ? (
               <Link
                 className="mt-5 block rounded-2xl border border-[#6366f1]/30 bg-gradient-to-br from-[#eef1ff] to-white p-5 shadow-sm transition hover:border-[#6366f1]/50 hover:shadow-md sm:mt-8 sm:p-6"
                 href="/board"
               >
                 <p className="text-xs font-black uppercase tracking-wide text-[#4937db]">留言板 · 置顶主题概要</p>
-                <h3 className="mt-2 text-lg font-black leading-snug text-[#15120d] sm:text-xl">{boardPin.topicTitle}</h3>
-                {boardPin.topPostPreview ? (
-                  <p className="mt-3 line-clamp-4 text-sm font-bold leading-7 text-[#4e4639] sm:text-base">{boardPin.topPostPreview}</p>
+                <h3 className="mt-2 text-lg font-black leading-snug text-[#15120d] sm:text-xl">{visibleBoardPin.topicTitle}</h3>
+                {visibleBoardPin.topPostPreview ? (
+                  <p className="mt-3 line-clamp-4 text-sm font-bold leading-7 text-[#4e4639] sm:text-base">{visibleBoardPin.topPostPreview}</p>
                 ) : (
                   <p className="mt-3 text-sm font-bold text-[#94a3b8]">该主题下还没有公开回答。</p>
                 )}
@@ -669,7 +663,7 @@ export default function BasicResultPage() {
               </button>
               <Link
                 className="inline-flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg bg-[#475569] px-2 py-2.5 text-xs font-black leading-tight text-white transition hover:bg-[#334155] sm:flex-row sm:gap-2 sm:px-5 sm:py-4 sm:text-lg"
-                href={getRetestHref(session)}
+                href={getRetestHref()}
               >
                 <RotateCcw className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />
                 <span>重新测试</span>

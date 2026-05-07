@@ -20,7 +20,7 @@ const LITE_RULES: RuleItem[] = [
     text: "答题不满 20 秒将被判定为作弊；预计用时约 2～4 分钟。"
   },
   {
-    text: "完成后生成与 Pro 版共用档位的鉴定结果，可保存图片、复制分享文案。"
+    text: "完成后生成鉴定结果，可保存图片、复制分享文案。"
   }
 ];
 
@@ -53,7 +53,7 @@ export function TestIntroView({ variant }: TestIntroViewProps) {
   const titleEn = isLite ? "QUICK TRUE / FALSE SCREENING" : "PROFESSIONAL SCENARIO TEST";
   const description = isLite
     ? [
-        "基于同一套题库生成的判断陈述，覆盖财政、制度与史观话术；按「支持 / 反对」累积映射到与 Pro 版一致的档位。",
+        "基于题库生成的判断陈述，覆盖财政、制度与史观话术；按「支持 / 反对」累积映射到结果档位。",
         "从百余道题库随机抽取 20 题，当场出分；适合快速自测与传播。"
       ]
     : [

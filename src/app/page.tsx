@@ -1,4 +1,5 @@
 import { ArrowRight, BarChart3 } from "lucide-react";
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { HomeAnnouncementModal } from "@/components/home-announcement-modal";
@@ -10,6 +11,19 @@ import { getBoardHomeSlides } from "@/lib/board-home-data";
 import { getBasicStats, type BasicStats } from "@/lib/basic-stats";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "新明粉检测器 - 科学检测你的历史认知倾向",
+  description: "通过 20 道判断题，测试你的明清史观认知偏差程度，生成即时结果并参与留言板讨论。",
+  alternates: {
+    canonical: "/"
+  },
+  openGraph: {
+    title: "新明粉检测器 - 科学检测你的历史认知倾向",
+    description: "通过 20 道判断题，测试你的明清史观认知偏差程度，生成即时结果并参与留言板讨论。",
+    url: "/"
+  }
+};
 
 function getDonutBackground(stats: BasicStats) {
   return (
@@ -37,9 +51,21 @@ export default async function HomePage() {
   const stats = await getBasicStats();
   const boardSlides = await getBoardHomeSlides();
   const donutBackground = getDonutBackground(stats);
+  const websiteJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: siteConfig.name,
+    url: siteConfig.url,
+    description: siteConfig.description,
+    inLanguage: "zh-CN"
+  };
 
   return (
     <main className="min-h-screen bg-[#f8fafc] text-[#050816]">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+      />
       <QqInAppBrowserBanner />
       <HomeAnnouncementModal />
 
@@ -97,13 +123,36 @@ export default async function HomePage() {
         <HomeTestAndBoardSection pin={boardSlides.pin} />
       </section>
 
+      <section className="mx-auto max-w-6xl px-5 pb-12">
+        <div className="grid gap-6 md:grid-cols-3">
+          <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-2xl font-black text-slate-900">本站说明</h2>
+            <p className="mt-4 text-base font-bold leading-8 text-slate-600">
+              新明粉检测器是一个面向明清史爱好者的趣味测试网站，用轻量问题帮助你观察自己在历史叙事、制度评价和明清比较中的倾向。
+            </p>
+          </article>
+          <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-2xl font-black text-slate-900">测试方式</h2>
+            <p className="mt-4 text-base font-bold leading-8 text-slate-600">
+              当前公开版本为普通测试：每次随机抽取 20 道判断题，围绕财政、制度与史观话术作答，完成后即时生成结果档位。
+            </p>
+          </article>
+          <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-2xl font-black text-slate-900">结果与讨论</h2>
+            <p className="mt-4 text-base font-bold leading-8 text-slate-600">
+              测试结果仅供娱乐和讨论参考。完成测试后可保存结果图片，也可以进入留言板浏览公开主题并参与明清史观讨论。
+            </p>
+          </article>
+        </div>
+      </section>
+
       <section className="mx-auto max-w-6xl px-5 pb-10">
         <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
           <h2 className="flex items-center gap-2 text-3xl font-black">
             <BarChart3 size={30} />
             全站测试分布
           </h2>
-          <p className="mt-2 text-lg text-slate-500">基于匿名测验提交（普通版或 Pro 版共用档位）</p>
+          <p className="mt-2 text-lg text-slate-500">基于普通测试的匿名测验提交，统计全站结果档位分布。</p>
 
           <div className="mt-10 grid items-center gap-10 md:grid-cols-[220px_1fr]">
             <div className="relative mx-auto h-44 w-44 rounded-full" style={{ background: donutBackground }}>

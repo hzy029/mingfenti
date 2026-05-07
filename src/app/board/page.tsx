@@ -1,10 +1,25 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { SiteHeader } from "@/components/site-header";
+import { siteConfig } from "@/data/site-config";
 import { ensureBoardReviewSchema } from "@/lib/board-review";
 import { previewBoardBody, stripMarkdownForPreview } from "@/lib/board-text";
 import { getD1Database } from "@/lib/cloudflare-db";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "留言板 - 明清史观讨论与测试结果交流",
+  description: "新明粉检测器留言板。浏览公开主题，围绕明清史观、测试结果和历史认知偏差进行讨论。",
+  alternates: {
+    canonical: "/board"
+  },
+  openGraph: {
+    title: "留言板 - 明清史观讨论与测试结果交流",
+    description: "浏览公开主题，围绕明清史观、测试结果和历史认知偏差进行讨论。",
+    url: "/board"
+  }
+};
 
 type TopicListRow = {
   id: number;
@@ -18,6 +33,24 @@ type TopicListRow = {
 export default async function BoardIndexPage() {
   const db = await getD1Database();
   let topics: TopicListRow[] = [];
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "首页",
+        item: `${siteConfig.url}/`
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "留言板",
+        item: `${siteConfig.url}/board`
+      }
+    ]
+  };
 
   if (db) {
     try {
@@ -56,6 +89,10 @@ export default async function BoardIndexPage() {
 
   return (
     <main className="min-h-screen bg-[#f8fafc] text-slate-900">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       <SiteHeader />
 
       <div className="mx-auto max-w-3xl px-5 py-10">

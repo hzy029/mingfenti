@@ -1,10 +1,13 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BoardAnswerForm } from "@/components/board-answer-form";
 import { BoardMarkdownBody } from "@/components/board-markdown-body";
 import { BoardCommentThread, type BoardCommentPublicRow } from "@/components/board-comment-thread";
 import { SiteHeader } from "@/components/site-header";
+import { siteConfig } from "@/data/site-config";
 import { ensureBoardReviewSchema } from "@/lib/board-review";
+import { previewBoardBody, stripMarkdownForPreview } from "@/lib/board-text";
 import { getD1Database } from "@/lib/cloudflare-db";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +38,94 @@ type CommentDbRow = {
 type BoardTopicPageProps = {
   params: Promise<{ topicId: string }>;
 };
+
+async function getPublicTopicMeta(topicId: number) {
+  const db = await getD1Database();
+
+  if (!db) {
+    return null;
+  }
+
+  try {
+    const topicResult = await db
+      .prepare(
+        `SELECT
+          t.id,
+          t.title
+        FROM board_topics t
+        WHERE t.id = ? AND t.hidden = 0
+        LIMIT 1`
+      )
+      .bind(topicId)
+      .all<{ id: number; title: string }>();
+
+    const topic = topicResult.results?.[0];
+
+    if (!topic) {
+      return null;
+    }
+
+    let description: string | null = null;
+
+    try {
+      const metaResult = await db
+        .prepare(`SELECT description FROM board_topic_meta WHERE topic_id = ?`)
+        .bind(topicId)
+        .all<{ description: string | null }>();
+      description = metaResult.results?.[0]?.description ?? null;
+    } catch {
+      description = null;
+    }
+
+    return { ...topic, description };
+  } catch {
+    return null;
+  }
+}
+
+export async function generateMetadata({ params }: BoardTopicPageProps): Promise<Metadata> {
+  const { topicId: rawTopicId } = await params;
+  const topicId = Number.parseInt(rawTopicId, 10);
+
+  if (!Number.isFinite(topicId)) {
+    return {
+      title: "留言主题",
+      robots: {
+        index: false,
+        follow: false
+      }
+    };
+  }
+
+  const topic = await getPublicTopicMeta(topicId);
+
+  if (!topic) {
+    return {
+      title: "留言主题",
+      robots: {
+        index: false,
+        follow: false
+      }
+    };
+  }
+
+  const description = topic.description
+    ? previewBoardBody(stripMarkdownForPreview(topic.description), 120)
+    : "新明粉检测器留言板公开主题，围绕明清史观、测试结果和历史认知偏差进行讨论。";
+
+  return {
+    title: `${topic.title} - 留言板`,
+    description,
+    alternates: {
+      canonical: `/board/${topic.id}`
+    },
+    openGraph: {
+      title: `${topic.title} - 留言板`,
+      description,
+      url: `/board/${topic.id}`
+    }
+  };
+}
 
 function groupCommentsByAnswer(rows: CommentDbRow[]): Map<number, BoardCommentPublicRow[]> {
   const map = new Map<number, BoardCommentPublicRow[]>();
@@ -166,6 +257,35 @@ export default async function BoardTopicPage({ params }: BoardTopicPageProps) {
 
   return (
     <main className="min-h-screen bg-[#f8fafc] text-slate-900">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              {
+                "@type": "ListItem",
+                position: 1,
+                name: "首页",
+                item: `${siteConfig.url}/`
+              },
+              {
+                "@type": "ListItem",
+                position: 2,
+                name: "留言板",
+                item: `${siteConfig.url}/board`
+              },
+              {
+                "@type": "ListItem",
+                position: 3,
+                name: topic.title,
+                item: `${siteConfig.url}/board/${topic.id}`
+              }
+            ]
+          })
+        }}
+      />
       <SiteHeader />
 
       <div className="mx-auto max-w-3xl px-5 py-10">

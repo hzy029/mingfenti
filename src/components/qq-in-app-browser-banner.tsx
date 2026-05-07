@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 function detectQqInAppBrowser(): boolean {
   if (typeof navigator === "undefined") {
@@ -26,11 +26,7 @@ function detectQqInAppBrowser(): boolean {
 }
 
 export function QqInAppBrowserBanner() {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    setVisible(detectQqInAppBrowser());
-  }, []);
+  const [visible, setVisible] = useState(detectQqInAppBrowser);
 
   if (!visible) {
     return null;

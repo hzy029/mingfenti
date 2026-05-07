@@ -25,7 +25,7 @@ export function SiteHeader() {
       <nav className="mx-auto flex h-[74px] max-w-6xl items-center justify-between px-5 text-base font-black text-[#0f1535]">
         <Link className="flex min-w-0 items-center gap-3" href="/">
           <LogoMark />
-          <span className="truncate text-xl">明粉检测器ti</span>
+          <span className="truncate text-xl">{siteConfig.name}</span>
         </Link>
 
         <div className="flex items-center lg:hidden">
