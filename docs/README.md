@@ -6,6 +6,6 @@
 - **[详细设计](详细设计/)** — 留言板/测试流程、评测标准、[题库.md](详细设计/题库.md)（`详细设计/题库/pro/` Pro 四选一、`详细设计/题库/lite/` 普通判断短表）
 - **[实现](实现/)** — 交接说明、开发流程备忘、公告草案
 
-**资料库**：[references/README.md](references/README.md)
+**资料库**：[references/README.md](references/README.md)（来源档案） · [主题资料库（公开）](library/README.md)
 
 **旧路径**：曾在 `需求设计/` 下的条目已迁走，见 [需求设计/README.md](需求设计/README.md)。

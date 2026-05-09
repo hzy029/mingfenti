@@ -70,6 +70,7 @@ database_name = "mingqing-detector"
 - [普通版评测标准](docs/详细设计/basic-evaluation-standard.md)
 - [Pro 版评测标准](docs/详细设计/pro-evaluation-standard.md)
 - [资料库说明](docs/references/README.md)
+- [主题资料库（公开网页与 AI 索引）](docs/library/README.md)
 - [题库主题索引](docs/references/topic-index.md)
 - [Pro 结果设计](docs/详细设计/pro-result-design.md)
 - [需求设计文档](docs/架构/sbti-ai-requirements-design.md)

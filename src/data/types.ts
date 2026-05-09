@@ -100,6 +100,47 @@ export type SampleCategory = {
   suggestedTags: string[];
 };
 
+export type LibraryThemeId =
+  | "song-ming-finance"
+  | "zhu-dreamer"
+  | "paper-archive";
+
+export type LibrarySourceType = "original" | "paper" | "zhihu" | "sample" | "note";
+
+export type LibraryArticleMeta = {
+  id: string;
+  /** 相对 `docs/library/articles` 的文章路径键（POSIX），不含 `.md`，例如 `paper-archive/题名`。用于与动态路由 `slug[]` 拼接结果对齐；对外链接请用 `href`。 */
+  slug: string;
+  title: string;
+  theme: LibraryThemeId;
+  secondaryThemes: LibraryThemeId[];
+  sourceType: LibrarySourceType;
+  authors: string[];
+  date: string;
+  summary: string;
+  keywords: string[];
+  aiUse: string;
+  zhihuUrl?: string;
+  bilibiliUrl?: string;
+  externalSourceUrl?: string;
+  public: boolean;
+  href: string;
+  url: string;
+  rawMarkdownUrl: string;
+  wordCount: number;
+  excerpt: string;
+};
+
+export type LibraryArticle = LibraryArticleMeta & {
+  body: string;
+};
+
+export type LibraryTheme = {
+  id: LibraryThemeId;
+  title: string;
+  description: string;
+};
+
 export type ProDimensionKey =
   | "westernCentrism"
   | "textbookDogmatism"
